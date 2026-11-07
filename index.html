@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PokeLog">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#a8c8ea">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+<title>PokeLog</title>
+<style>
+:root{
+  --font:"Microsoft JhengHei","微軟正黑體","PingFang TC","Noto Sans TC",sans-serif;
+  --menu-bg:rgba(207,106,135,.5);
+  --menu-fg:#fff;
+  --top:calc(env(safe-area-inset-top) + 12px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;min-height:100lvh;overflow:hidden;font-family:var(--font);color:#2b2f45;background:#8fb8e0;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+button{font-family:inherit;cursor:pointer}
+
+/* ---------- 背景 ---------- */
+#bg{position:fixed;left:0;top:0;width:100%;height:100vh;height:100lvh;overflow:hidden;background:#8fb8e0}
+#bgHome,#bgPage{position:absolute;left:0;top:0;width:100%;height:100%;background-size:cover;background-position:center center;background-repeat:no-repeat;transition:opacity .25s}
+#bgHome{background-image:url(home.jpg)}
+#bgPage{background-image:url(bg2.jpg)}
+body[data-page="home"] #bgPage{opacity:0}
+body:not([data-page="home"]) #bgHome{opacity:0}
+#veil{position:absolute;inset:0;background:rgba(255,255,255,.18);opacity:0;transition:opacity .25s;pointer-events:none}
+body:not([data-page="home"]) #veil{opacity:1}
+
+/* ---------- 首頁 ---------- */
+#home{position:fixed;inset:0;display:none;pointer-events:none}
+body[data-page="home"] #home{display:block}
+#home h1{
+  position:absolute;left:0;right:0;top:30%;margin:0;text-align:center;
+  font-family:"Fredoka","Baloo 2","Arial Rounded MT Bold","Hiragino Maru Gothic ProN","Varela Round",sans-serif;font-weight:700;font-size:clamp(52px,19vw,92px);letter-spacing:2px;
+  color:#4a5fc8;
+  -webkit-text-stroke:8px #fff;paint-order:stroke fill;
+  text-shadow:0 3px 0 rgba(255,255,255,.9),0 4px 10px rgba(58,63,158,.25);
+}
+
+/* ---------- 寶貝球與選單 ---------- */
+#ballBtn{
+  position:fixed;top:var(--top);width:52px;height:52px;padding:0;border:0;border-radius:50%;background:none;z-index:30;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.25));transition:transform .15s;
+}
+#ballBtn:active{transform:scale(.92)}
+#ballBtn svg{width:100%;height:100%;display:block}
+body[data-page="home"] #ballBtn{right:14px}
+body:not([data-page="home"]) #ballBtn{left:14px}
+
+#scrim{position:fixed;inset:0;z-index:20;display:none}
+#scrim.on{display:block}
+#menu{
+  position:fixed;top:calc(var(--top) + 26px);width:76px;z-index:25;
+  background:var(--menu-bg);color:var(--menu-fg);
+  border-radius:38px;padding:34px 0 12px;text-align:center;
+  backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+  opacity:0;pointer-events:none;transform:translateY(-10px) scaleY(.92);transform-origin:top;
+  transition:opacity .18s,transform .18s;
+}
+body[data-page="home"] #menu{right:2px}
+body:not([data-page="home"]) #menu{left:2px}
+#menu.on{opacity:1;pointer-events:auto;transform:none}
+#menu .item{display:block;width:100%;padding:11px 0;border:0;background:none;color:inherit;font-size:15px;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+#menu.light .item{text-shadow:none}
+#menu .item.cur{text-decoration:underline;text-underline-offset:5px}
+#menu .cloud{display:block;margin:10px auto 0;width:44px;height:30px;border:0;background:none;padding:0;filter:drop-shadow(0 1px 3px rgba(0,0,0,.25))}
+#menu .cloud svg{width:100%;height:100%}
+
+/* ---------- 子頁面 ---------- */
+#page{position:fixed;inset:0;display:none;flex-direction:column;padding-top:var(--top)}
+body:not([data-page="home"]) #page{display:flex}
+.head{display:flex;align-items:center;gap:10px;padding:0 14px 0 76px;height:52px;flex:none}
+.head h2{margin:0;font-size:30px;font-weight:800;flex:1;color:#1f2340;letter-spacing:1px}
+.modeBox{position:relative}
+.modeBox::before{content:"";position:absolute;left:10px;top:50%;margin-top:-5px;border:7px solid transparent;border-top:9px solid #8d93a8;border-bottom:0;pointer-events:none}
+.modeBox select{
+  appearance:none;-webkit-appearance:none;border:0;border-radius:8px;background:rgba(214,226,245,.92);
+  font-family:inherit;font-size:16px;font-weight:700;color:#1f2340;padding:9px 14px 9px 34px;min-width:116px;
+}
+.chips{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:8px 12px 10px;flex:none}
+.chip{
+  height:46px;border-radius:50%;border:3px solid rgba(255,255,255,.55);padding:0;color:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+  font-size:10px;font-weight:700;line-height:1.1;transition:opacity .15s,border-color .15s;
+  text-shadow:0 1px 1px rgba(0,0,0,.3);
+}
+.chip svg{width:15px;height:15px;display:block;margin-bottom:1px}
+.chips.filtering .chip{opacity:.3}
+.chips.filtering .chip.sel{opacity:1;border:4px solid #1f2340}
+.list{flex:1;overflow-y:auto;padding:0 12px calc(env(safe-area-inset-bottom) + 24px);-webkit-overflow-scrolling:touch}
+.row{display:grid;grid-template-columns:46px 74px 1fr 86px;gap:4px;margin-bottom:4px}
+.cell{background:var(--c);color:#fff;min-height:78px;border-radius:6px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.rank{display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800}
+.photo{display:flex;align-items:center;justify-content:center;padding:3px}
+.photo img{width:100%;height:100%;max-height:72px;object-fit:contain;display:block}
+.photo .noimg{font-size:26px;opacity:.6}
+.info{padding:6px 6px;font-size:12px;line-height:1.3;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.info div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.info .nm{font-size:14px;font-weight:800}
+.own{display:flex;align-items:center;justify-content:center;font-size:12px;line-height:1.35;padding:0 4px}
+.own .plus{font-size:44px;font-weight:300;line-height:1}
+.own .ck{width:24px;height:24px;flex:none;margin-right:5px}
+.own .st div{white-space:nowrap}
+.addRow{display:grid;grid-template-columns:46px 1fr;margin-top:8px}
+.addBtn{width:40px;height:40px;border-radius:50%;border:3px solid #555b72;background:rgba(255,255,255,.6);color:#555b72;font-size:26px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
+.empty{text-align:center;color:#555b72;padding:26px 10px;font-size:14px;line-height:1.7}
+.shell{flex:1;display:flex;align-items:center;justify-content:center;color:#555b72;font-size:16px;padding-bottom:80px}
+
+/* ---------- 底部表單 ---------- */
+.sheetWrap{position:fixed;inset:0;z-index:50;background:rgba(20,25,50,.38);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:520px;max-height:90%;overflow-y:auto;background:#fff;border-radius:22px 22px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom) + 18px)}
+.sheet h3{margin:0 0 12px;font-size:20px;color:#1f2340}
+.f{display:block;margin-bottom:10px}
+.f span{display:block;font-size:13px;color:#6b7186;margin-bottom:4px}
+.f input,.f select{width:100%;font-family:inherit;font-size:16px;padding:10px 12px;border:1.5px solid #d7dcea;border-radius:10px;background:#fafbff;color:#1f2340}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.chk{display:flex;align-items:center;gap:8px;font-size:16px;margin:4px 0 10px}
+.chk input{width:22px;height:22px}
+.photoPick{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.photoPick .pv{width:72px;height:72px;border-radius:12px;background:#eef1fa;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#98a0b8;font-size:12px}
+.photoPick .pv img{width:100%;height:100%;object-fit:contain}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-size:16px;font-weight:700;background:#e9edf8;color:#1f2340}
+.btn.main{background:#5b6bd6;color:#fff}
+.btn.del{background:#fde8e8;color:#c0392b}
+.btns{display:flex;gap:10px;margin-top:8px}
+.btns .btn{flex:1}
+.note{font-size:13px;color:#6b7186;line-height:1.6;margin:0 0 12px}
+</style>
+</head>
+<body data-page="home">
+
+<div id="bg"><div id="bgHome"></div><div id="bgPage"></div><div id="veil"></div></div>
+
+<div id="home"><h1>PokeLog</h1></div>
+<div id="page"></div>
+
+<button id="ballBtn" aria-label="主選單"></button>
+<div id="scrim"></div>
+<div id="menu"></div>
+<div id="sheetRoot"></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= 工具 ================= */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function rgba(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ================= 資料 ================= */
+const KEY='pokelog_v1';
+let DB=load();
+function load(){
+  try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.team))return{team:d.team,max:Array.isArray(d.max)?d.max:[]}}catch(e){}
+  return{team:[],max:[]};
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){alert('儲存失敗，可能是瀏覽器空間不足。請先匯出備份。')}}
+
+/* ================= 屬性 ================= */
+// 顯示順序依排名頁設計圖
+const TYPES=[
+ {k:'normal',n:'一般',c:'#929aa3'},{k:'fighting',n:'格鬥',c:'#ff8000'},{k:'flying',n:'飛',c:'#86b9ea'},
+ {k:'ground',n:'地面',c:'#8b4f20'},{k:'rock',n:'岩石',c:'#b4a785'},{k:'ghost',n:'幽靈',c:'#6e4070'},
+ {k:'electric',n:'電',c:'#fac000'},{k:'grass',n:'草',c:'#3fa129'},{k:'water',n:'水',c:'#2980ef'},
+ {k:'fire',n:'火',c:'#e62829'},{k:'bug',n:'蟲',c:'#92a31b'},{k:'poison',n:'毒',c:'#8d42c8'},
+ {k:'steel',n:'鋼',c:'#62a2bf'},{k:'psychic',n:'超能力',c:'#ef4179'},{k:'ice',n:'冰',c:'#3dd9f9'},
+ {k:'dragon',n:'龍',c:'#5060e1'},{k:'dark',n:'惡',c:'#50413f'},{k:'fairy',n:'妖精',c:'#ef70ef'}
+];
+const TMAP={};TYPES.forEach(t=>TMAP[t.k]=t);
+const ICONS={
+ normal:'<circle cx="12" cy="12" r="7" fill="none" stroke="#fff" stroke-width="3.5"/>',
+ fighting:'<rect x="5" y="5" width="14" height="11" rx="2.5" fill="#fff"/><rect x="7" y="17.5" width="10" height="3" rx="1" fill="#fff"/><path d="M9.3 7v5M12 7v5M14.7 7v5" stroke="rgba(0,0,0,.3)" stroke-width="1.2"/>',
+ flying:'<path d="M3 21C5 11 11 5 21 3C19 10 15 15 9 16L7 21Z" fill="#fff"/>',
+ ground:'<path d="M3 10L12 5L21 10L12 15Z" fill="#fff"/><path d="M3 14.5L12 19.5L21 14.5" fill="none" stroke="#fff" stroke-width="2.4"/>',
+ rock:'<path d="M8 3H16L21 8V16L16 21H8L3 16V8Z" fill="#fff"/>',
+ ghost:'<path d="M5 21V11a7 7 0 0 1 14 0v10l-3-2.5-2 2.5-2-2.5-2 2.5-2-2.5z" fill="#fff"/><circle cx="9.5" cy="11" r="1.4" fill="rgba(0,0,0,.35)"/><circle cx="14.5" cy="11" r="1.4" fill="rgba(0,0,0,.35)"/>',
+ electric:'<path d="M13 2L5 14h6l-1 8 9-13h-6z" fill="#fff"/>',
+ grass:'<path d="M4 20C3 12 7 6 12 4c1 6 0 12-8 16z" fill="#fff"/><path d="M12 20c0-6 3-12 8-15 1 7-2 12-8 15z" fill="#fff"/>',
+ water:'<path d="M12 3c4 5 7 8 7 12a7 7 0 0 1-14 0c0-4 3-7 7-12z" fill="#fff"/>',
+ fire:'<path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-4 3-6 1 2 2 2 3 1-1-3-1-5 0-7z" fill="#fff"/>',
+ bug:'<ellipse cx="12" cy="13" rx="5" ry="6.5" fill="#fff"/><path d="M4 8l4 3M20 8l-4 3M3 14h5M21 14h-5M5 20l4-3M19 20l-4-3" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>',
+ poison:'<circle cx="9" cy="8" r="3" fill="#fff"/><circle cx="16" cy="10" r="2" fill="#fff"/><path d="M4 19Q12 11 20 19Z" fill="#fff"/>',
+ steel:'<path d="M4 6L12 3L20 6L18 16L12 21L6 16Z" fill="#fff"/>',
+ psychic:'<path d="M12 3l7 4v10l-7 4-7-4V7z" fill="none" stroke="#fff" stroke-width="3"/>',
+ ice:'<path d="M12 2v20M3.5 7l17 10M3.5 17l17-10" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>',
+ dragon:'<path d="M12 3L16 8L21 8L18 13L12 21L6 13L3 8L8 8Z" fill="#fff"/>',
+ dark:'<path d="M5 5v8a7 7 0 0 0 14 0V5h-4v8a3 3 0 0 1-6 0V5z" fill="#fff"/>',
+ fairy:'<path d="M12 12L4 6v12zM12 12l8-6v12z" fill="#fff"/><circle cx="12" cy="12" r="2.5" fill="#fff"/>'
+};
+const typeIcon=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]||''}</svg>`;
+
+/* ================= 六顆寶貝球（每天隨機一顆） ================= */
+const BALLS=[
+ {top:'#cf6a87',bot:'#fbd0e6',fg:'#ffffff',extra:''},
+ {top:'#f6ebe5',bot:'#f6ebe5',fg:'#8a5646',light:true,
+  extra:'<path d="M0 60Q50 72 100 60" fill="none" stroke="#ff2a00" stroke-width="3.2"/>'},
+ {top:'#20a0c8',bot:'#bfe6f2',fg:'#ffffff',
+  extra:'<path d="M5 34L27 18L41 40L19 57Z" fill="#cc6a84"/><path d="M95 34L73 18L59 40L81 57Z" fill="#cc6a84"/>'},
+ {top:'#9b78b4',bot:'#ddd0e6',fg:'#ffffff',
+  extra:'<ellipse cx="21" cy="32" rx="13" ry="21" transform="rotate(-14 21 32)" fill="#b8409c"/><ellipse cx="79" cy="32" rx="13" ry="21" transform="rotate(14 79 32)" fill="#b8409c"/><path d="M34 52L41 36L50 47L59 36L66 52" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'},
+ {top:'#5c4636',bot:'#fdeaf2',fg:'#ffffff',
+  extra:'<path d="M26 68L30 24Q50 14 70 24L74 68L64 68L62 37Q50 31 38 37L36 68Z" fill="#f2c869"/>'},
+ {top:'#2f3437',bot:'#fdeaf2',fg:'#ffffff',
+  extra:'<path d="M4 31Q50 13 96 31" fill="none" stroke="#f5a623" stroke-width="5"/><path d="M5 22Q50 5 95 22" fill="none" stroke="#f5a623" stroke-width="3"/><path d="M0 60Q50 72 100 60" fill="none" stroke="#f5a623" stroke-width="4"/>'}
+];
+function ballSVG(i){
+  const b=BALLS[i];
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="bclip"><circle cx="50" cy="50" r="48"/></clipPath></defs>
+  <g clip-path="url(#bclip)"><rect width="100" height="100" fill="${b.bot}"/><path d="M0 0H100V60Q50 72 0 60Z" fill="${b.top}"/>${b.extra}</g>
+  <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(0,0,0,.12)" stroke-width="1.5"/></svg>`;
+}
+function dailyIndex(){
+  const s=todayStr();let h=2166136261;
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
+  h^=h>>>13;h=Math.imul(h,1274126177);h^=h>>>16;
+  return (h>>>0)%BALLS.length;
+}
+let ballDay='';
+function applyBall(){
+  ballDay=todayStr();
+  const i=dailyIndex(),b=BALLS[i];
+  $('#ballBtn').innerHTML=ballSVG(i);
+  document.documentElement.style.setProperty('--menu-bg',rgba(b.top,.5));
+  document.documentElement.style.setProperty('--menu-fg',b.fg);
+  $('#menu').classList.toggle('light',!!b.light);
+}
+
+/* ================= 頁面設定（之後要增加/改名改這裡） ================= */
+const PAGES=[
+ {id:'rank',label:'排名',title:'排名',render:renderRank},
+ {id:'events',label:'活動',title:'活動',render:renderBlank},
+ {id:'types',label:'屬性表',title:'屬性表',render:renderBlank}
+];
+let current='home';
+const UI={mode:'team',filter:null};
+
+function go(id){
+  current=id;
+  document.body.dataset.page=id;
+  closeMenu();
+  if(id==='home'){$('#page').innerHTML='';return}
+  const p=PAGES.find(x=>x.id===id);
+  if(id==='rank'){UI.filter=null}
+  p.render($('#page'),p);
+  const l=$('#page .list');if(l)l.scrollTop=0;
+}
+
+/* ================= 選單 ================= */
+const CLOUD='<svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg"><path d="M17 37a12 12 0 0 1-2-23.8A16 16 0 0 1 46 15a11 11 0 0 1 1 22z" fill="#fff"/></svg>';
+function buildMenu(){
+  const items=[];
+  if(current!=='home')items.push(`<button class="item" data-go="home">首頁</button>`);
+  PAGES.forEach(p=>items.push(`<button class="item${p.id===current?' cur':''}" data-go="${p.id}">${esc(p.label)}</button>`));
+  $('#menu').innerHTML=items.join('')+`<button class="cloud" data-cloud="1" aria-label="備份">${CLOUD}</button>`;
+}
+function openMenu(){
+  if(ballDay!==todayStr())applyBall();
+  buildMenu();$('#menu').classList.add('on');$('#scrim').classList.add('on');
+}
+function closeMenu(){$('#menu').classList.remove('on');$('#scrim').classList.remove('on')}
+$('#ballBtn').addEventListener('click',()=>{$('#menu').classList.contains('on')?closeMenu():openMenu()});
+$('#scrim').addEventListener('click',closeMenu);
+$('#menu').addEventListener('click',e=>{
+  const g=e.target.closest('[data-go]');
+  if(g){go(g.dataset.go);return}
+  if(e.target.closest('[data-cloud]')){closeMenu();openBackup()}
+});
+
+/* ================= 底部表單 ================= */
+function openSheet(html){
+  closeSheet();
+  const w=document.createElement('div');
+  w.className='sheetWrap';
+  w.innerHTML=`<div class="sheet">${html}</div>`;
+  w.addEventListener('click',e=>{if(e.target===w)closeSheet()});
+  $('#sheetRoot').appendChild(w);
+  return w.querySelector('.sheet');
+}
+function closeSheet(){$('#sheetRoot').innerHTML=''}
+
+/* ================= 排名頁 ================= */
+function renderBlank(root,p){
+  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="shell">建置中…</div>`;
+}
+function modeSelect(){
+  return `<div class="modeBox"><select id="modeSel" aria-label="戰鬥類型"><option value="team"${UI.mode==='team'?' selected':''}>團體戰</option><option value="max"${UI.mode==='max'?' selected':''}>極巨戰</option></select></div>`;
+}
+function renderRank(root,p){
+  p=p||PAGES[0];
+  const head=`<div class="head"><h2>${esc(p.title)}</h2>${modeSelect()}</div>`;
+  if(UI.mode!=='team'){
+    root.innerHTML=head+`<div class="shell">極巨戰：建置中…</div>`;
+    return;
+  }
+  const chips=TYPES.map(t=>`<button class="chip${UI.filter===t.k?' sel':''}" style="background:${t.c}" data-act="chip" data-k="${t.k}">${typeIcon(t.k)}<span>${t.n}</span></button>`).join('');
+  let list=DB.team.slice();
+  if(UI.filter)list=list.filter(x=>x.t1===UI.filter);
+  list.sort((a,b)=>(isNaN(parseFloat(b.dps))?-1:parseFloat(b.dps))-(isNaN(parseFloat(a.dps))?-1:parseFloat(a.dps)));
+  const rows=list.map((x,i)=>{
+    const c=(TMAP[x.t1]||TMAP.normal).c+'d9';
+    const own=x.owned
+      ?`<div class="cell own" style="--c:${c}" data-act="own" data-id="${x.id}"><svg class="ck" viewBox="0 0 24 24"><path d="M4 13l5 5L20 6" fill="none" stroke="#35e04a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="st"><div>HP ${esc(x.hp)}</div><div>Att ${esc(x.atk)}</div><div>Def ${esc(x.def)}</div></div></div>`
+      :`<div class="cell own" style="--c:${c}" data-act="own" data-id="${x.id}"><span class="plus">+</span></div>`;
+    return `<div class="row">
+      <div class="cell rank" style="--c:${c}">${i+1}</div>
+      <div class="cell photo" style="--c:${c}" data-act="edit" data-id="${x.id}">${x.photo?`<img src="${x.photo}" alt="">`:'<span class="noimg">?</span>'}</div>
+      <div class="cell info" style="--c:${c}" data-act="edit" data-id="${x.id}">
+        <div class="nm">${esc(x.name)||'（未命名）'}</div>
+        <div>小招${x.fast?' '+esc(x.fast):''}</div>
+        <div>大招${x.charged?' '+esc(x.charged):''}</div>
+        <div>DPS${x.dps!==''&&x.dps!=null?'='+esc(x.dps):''}</div>
+      </div>
+      ${own}
+    </div>`;
+  }).join('');
+  const empty=list.length?'':`<div class="empty">${DB.team.length?'這個屬性還沒有寶可夢':'還沒有資料，點左下角的 + 新增'}</div>`;
+  root.innerHTML=head+`<div class="chips${UI.filter?' filtering':''}">${chips}</div>
+    <div class="list">${rows}${empty}<div class="addRow"><button class="addBtn" data-act="add" aria-label="新增寶可夢">+</button></div></div>`;
+}
+$('#page').addEventListener('click',e=>{
+  const t=e.target.closest('[data-act]');if(!t)return;
+  const a=t.dataset.act;
+  if(a==='chip'){UI.filter=UI.filter===t.dataset.k?null:t.dataset.k;const st=$('#page .list').scrollTop;renderRank($('#page'));$('#page .list').scrollTop=st}
+  else if(a==='add')openEdit(null);
+  else if(a==='edit')openEdit(t.dataset.id);
+  else if(a==='own')openOwn(t.dataset.id);
+});
+$('#page').addEventListener('change',e=>{
+  if(e.target.id==='modeSel'){UI.mode=e.target.value;UI.filter=null;renderRank($('#page'))}
+});
+
+/* ---- 新增 / 編輯 ---- */
+function readImage(file){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onerror=rej;
+    fr.onload=()=>{
+      const img=new Image();
+      img.onerror=rej;
+      img.onload=()=>{
+        const M=220,s=Math.min(1,M/Math.max(img.width,img.height));
+        const c=document.createElement('canvas');
+        c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        const png=/png|webp|gif/.test(file.type);
+        res(png?c.toDataURL('image/png'):c.toDataURL('image/jpeg',.85));
+      };
+      img.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function typeOpts(sel,withNone){
+  return (withNone?`<option value="">無</option>`:'')+TYPES.map(t=>`<option value="${t.k}"${t.k===sel?' selected':''}>${t.n}</option>`).join('');
+}
+function openEdit(id){
+  const old=id?DB.team.find(x=>x.id===id):null;
+  const d=old||{name:'',photo:'',t1:'normal',t2:'',fast:'',charged:'',dps:'',owned:false,hp:'',atk:'',def:''};
+  let photo=d.photo||'';
+  const s=openSheet(`
+    <h3>${old?'編輯寶可夢':'新增寶可夢'}</h3>
+    <div class="photoPick"><div class="pv" id="pv">${photo?`<img src="${photo}" alt="">`:'無照片'}</div>
+      <button class="btn" id="pickBtn" type="button">選擇照片</button><input type="file" id="photoIn" accept="image/*" hidden></div>
+    <label class="f"><span>名字</span><input id="fName" value="${esc(d.name)}" autocomplete="off"></label>
+    <label class="f"><span>屬性（決定底色與篩選）</span><select id="fT1">${typeOpts(d.t1,false)}</select></label>
+    <div class="f2">
+      <label class="f"><span>小招</span><input id="fFast" value="${esc(d.fast)}" autocomplete="off"></label>
+      <label class="f"><span>大招</span><input id="fCharged" value="${esc(d.charged)}" autocomplete="off"></label>
+    </div>
+    <label class="f"><span>DPS</span><input id="fDps" type="number" step="any" inputmode="decimal" value="${esc(d.dps)}"></label>
+    <label class="chk"><input type="checkbox" id="fOwned"${d.owned?' checked':''}> 我有這隻</label>
+    <div class="f3">
+      <label class="f"><span>HP</span><input id="fHp" type="number" inputmode="numeric" value="${esc(d.hp)}"></label>
+      <label class="f"><span>攻擊</span><input id="fAtk" type="number" inputmode="numeric" value="${esc(d.atk)}"></label>
+      <label class="f"><span>防禦</span><input id="fDef" type="number" inputmode="numeric" value="${esc(d.def)}"></label>
+    </div>
+    <div class="btns">${old?'<button class="btn del" id="delBtn">刪除</button>':''}<button class="btn" id="cancelBtn">取消</button><button class="btn main" id="saveBtn">儲存</button></div>`);
+  const q=x=>s.querySelector(x);
+  q('#pickBtn').onclick=()=>q('#photoIn').click();
+  q('#photoIn').onchange=async e=>{
+    const f=e.target.files[0];if(!f)return;
+    try{photo=await readImage(f);q('#pv').innerHTML=`<img src="${photo}" alt="">`}catch(err){alert('照片讀取失敗')}
+  };
+  q('#cancelBtn').onclick=closeSheet;
+  if(old)q('#delBtn').onclick=()=>{if(confirm('確定刪除「'+(old.name||'這隻')+'」？')){DB.team=DB.team.filter(x=>x.id!==old.id);save();closeSheet();renderRank($('#page'))}};
+  q('#saveBtn').onclick=()=>{
+    const name=q('#fName').value.trim();
+    if(!name&&!photo){alert('請至少填名字或選一張照片');return}
+    const rec={
+      id:old?old.id:uid(),name,photo,
+      t1:q('#fT1').value,t2:old?(old.t2||''):'',
+      fast:q('#fFast').value.trim(),charged:q('#fCharged').value.trim(),
+      dps:q('#fDps').value.trim(),
+      owned:q('#fOwned').checked,hp:q('#fHp').value.trim(),atk:q('#fAtk').value.trim(),def:q('#fDef').value.trim()
+    };
+    if(old)DB.team[DB.team.findIndex(x=>x.id===old.id)]=rec;else DB.team.push(rec);
+    save();closeSheet();renderRank($('#page'));
+  };
+}
+
+/* ---- 快速設定「我有這隻」 ---- */
+function openOwn(id){
+  const p=DB.team.find(x=>x.id===id);if(!p)return;
+  const s=openSheet(`
+    <h3>${esc(p.name)||'這隻寶可夢'}</h3>
+    <div class="f3">
+      <label class="f"><span>HP</span><input id="oHp" type="number" inputmode="numeric" value="${esc(p.hp)}"></label>
+      <label class="f"><span>攻擊</span><input id="oAtk" type="number" inputmode="numeric" value="${esc(p.atk)}"></label>
+      <label class="f"><span>防禦</span><input id="oDef" type="number" inputmode="numeric" value="${esc(p.def)}"></label>
+    </div>
+    <div class="btns">${p.owned?'<button class="btn del" id="noBtn">我沒有</button>':''}<button class="btn" id="cBtn">取消</button><button class="btn main" id="okBtn">我有這隻</button></div>`);
+  const q=x=>s.querySelector(x);
+  q('#cBtn').onclick=closeSheet;
+  if(p.owned)q('#noBtn').onclick=()=>{p.owned=false;save();closeSheet();renderRank($('#page'))};
+  q('#okBtn').onclick=()=>{p.owned=true;p.hp=q('#oHp').value.trim();p.atk=q('#oAtk').value.trim();p.def=q('#oDef').value.trim();save();closeSheet();renderRank($('#page'))};
+}
+
+/* ================= 雲朵備份 ================= */
+function openBackup(){
+  const s=openSheet(`
+    <h3>雲朵備份</h3>
+    <p class="note">目前資料：團體戰 ${DB.team.length} 筆。<br>資料存在這支手機的瀏覽器裡，換手機或清除網站資料前，請先匯出備份。</p>
+    <div class="btns"><button class="btn main" id="exBtn">匯出備份</button><button class="btn" id="imBtn">匯入備份</button></div>
+    <div class="btns"><button class="btn" id="bClose">關閉</button></div>`);
+  s.querySelector('#exBtn').onclick=exportData;
+  s.querySelector('#imBtn').onclick=()=>$('#importFile').click();
+  s.querySelector('#bClose').onclick=closeSheet;
+}
+async function exportData(){
+  const text=JSON.stringify({app:'PokeLog',version:1,exportedAt:new Date().toISOString(),data:DB});
+  const blob=new Blob([text],{type:'application/json'});
+  const name='PokeLog-backup-'+todayStr()+'.json';
+  try{
+    const file=new File([blob],name,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'PokeLog 備份'});return}
+  }catch(e){if(e&&e.name==='AbortError')return}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+}
+$('#importFile').addEventListener('change',e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const j=JSON.parse(fr.result);
+      const d=j&&j.data?j.data:j;
+      if(!d||!Array.isArray(d.team))throw new Error('format');
+      if(!confirm('匯入會取代目前的資料（團體戰 '+d.team.length+' 筆），確定嗎？'))return;
+      DB={team:d.team,max:Array.isArray(d.max)?d.max:[]};
+      save();closeSheet();
+      if(current!=='home'){const p=PAGES.find(x=>x.id===current);p.render($('#page'),p)}
+      alert('匯入完成');
+    }catch(err){alert('這個檔案不是 PokeLog 的備份')}
+  };
+  fr.readAsText(f);
+});
+
+/* ================= 啟動 ================= */
+applyBall();
+go('home');
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ballDay!==todayStr())applyBall()});
+})();
+</script>
+</body>
+</html>
