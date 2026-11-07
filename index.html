@@ -50,9 +50,8 @@ body[data-page="home"] #home{display:block}
 /* ---------- 寶貝球與選單 ---------- */
 #ballBtn{
   position:fixed;top:var(--top);width:52px;height:52px;padding:0;border:0;border-radius:50%;background:none;z-index:30;
-  filter:drop-shadow(0 2px 4px rgba(0,0,0,.25));transition:transform .15s;
+  box-shadow:0 2px 5px rgba(0,0,0,.25);
 }
-#ballBtn:active{transform:scale(.92)}
 #ballBtn svg{width:100%;height:100%;display:block}
 body[data-page="home"] #ballBtn{right:48px;top:calc(var(--top) + 88px)}
 body:not([data-page="home"]) #ballBtn{left:22px}
@@ -79,7 +78,7 @@ body:not([data-page="home"]) #menu{left:10px}
 /* ---------- 子頁面 ---------- */
 #page{position:fixed;inset:0;display:none;flex-direction:column;padding-top:var(--top)}
 body:not([data-page="home"]) #page{display:flex}
-.head{display:flex;align-items:center;gap:10px;padding:0 14px 0 92px;height:52px;flex:none}
+.head{display:flex;align-items:center;gap:10px;padding:0 22px 0 92px;height:52px;flex:none}
 .head h2{margin:0;font-size:30px;font-weight:800;flex:1;color:#1f2340;letter-spacing:1px}
 .modeBox{position:relative}
 .modeBox::before{content:"";position:absolute;left:10px;top:50%;margin-top:-5px;border:7px solid transparent;border-top:9px solid #8d93a8;border-bottom:0;pointer-events:none}
@@ -97,7 +96,7 @@ body:not([data-page="home"]) #page{display:flex}
 .chip svg{width:15px;height:15px;display:block;margin-bottom:1px}
 .chips.filtering .chip{opacity:.3}
 .chips.filtering .chip.sel{opacity:1;border:4px solid rgba(0,0,0,.5)}
-.list{flex:1;overflow-y:auto;padding:0 12px calc(env(safe-area-inset-bottom) + 24px);-webkit-overflow-scrolling:touch}
+.list{flex:1;overflow-y:auto;padding:10px 12px calc(env(safe-area-inset-bottom) + 24px);-webkit-overflow-scrolling:touch}
 .row{display:grid;grid-template-columns:46px 74px 1fr 86px;gap:4px;margin-bottom:4px}
 .cell{background:var(--c);color:#fff;min-height:78px;border-radius:6px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
 .rank{display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800}
@@ -112,7 +111,7 @@ body:not([data-page="home"]) #page{display:flex}
 .own .ck{width:24px;height:24px;flex:none;margin-right:5px}
 .own .st div{white-space:nowrap}
 .addRow{display:grid;grid-template-columns:46px 1fr;margin-top:8px}
-.addBtn{width:40px;height:40px;border-radius:50%;border:3px solid #555b72;background:rgba(255,255,255,.6);color:#555b72;font-size:26px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
+.addBtn{width:40px;height:40px;border-radius:50%;border:3px solid rgba(0,0,0,.5);background:rgba(255,255,255,.6);color:rgba(0,0,0,.5);justify-self:center;font-size:26px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
 .empty{text-align:center;color:#555b72;padding:26px 10px;font-size:14px;line-height:1.7}
 .shell{flex:1;display:flex;align-items:center;justify-content:center;color:#555b72;font-size:16px;padding-bottom:80px}
 
@@ -253,7 +252,7 @@ const UI={mode:'team',filter:null};
 function go(id){
   current=id;
   document.body.dataset.page=id;
-  closeMenu();
+  closeMenu();applyBall();
   if(id==='home'){$('#page').innerHTML='';return}
   const p=PAGES.find(x=>x.id===id);
   if(id==='rank'){UI.filter=null}
