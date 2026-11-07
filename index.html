@@ -116,6 +116,35 @@ body:not([data-page="home"]) #page{display:flex}
 .empty{text-align:center;color:#555b72;padding:26px 10px;font-size:14px;line-height:1.7}
 .shell{flex:1;display:flex;align-items:center;justify-content:center;color:#555b72;font-size:16px;padding-bottom:80px}
 
+/* ---------- 極巨戰表格 ---------- */
+.row.max{grid-template-columns:34px 1fr 1fr 80px}
+.row.max .rank{font-size:22px}
+.cell.mx{padding:5px 4px;text-align:center;font-size:11.5px;line-height:1.4;display:flex;flex-direction:column;align-items:center;min-width:0;min-height:116px}
+.cell.mx.blank{background:none;text-shadow:none}
+.mx .mph{width:100%;height:58px;display:flex;align-items:center;justify-content:center}
+.mx .mph img{max-width:100%;max-height:58px;object-fit:contain;display:block}
+.mx .mph .noimg{font-size:26px;opacity:.6}
+.mx .nm{font-size:13px;font-weight:800;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mx div{max-width:100%}
+.ownMax{display:grid;grid-template-rows:1fr 1fr;gap:4px;min-height:116px}
+.half{background:var(--c);color:#fff;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;line-height:1.5;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.35);white-space:nowrap}
+.half.blank{background:none}
+.half .ln{display:flex;align-items:center;justify-content:center;gap:3px;font-weight:700}
+.half .ln .ck{width:17px;height:17px;margin:0}
+.half .plus{display:flex;align-items:center;justify-content:center;line-height:0}
+/* ---------- 日曆 ---------- */
+.cal{margin:8px 12px 0;padding:12px;border-radius:18px;background:rgba(255,255,255,.72)}
+.calHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.calHead b{font-size:18px;color:#1f2340}
+.calBtn{width:38px;height:38px;border-radius:50%;border:0;background:rgba(0,0,0,.07);font-size:22px;line-height:1;color:#1f2340;padding:0}
+.calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.calGrid .wk{font-size:12px;color:#6b7186;padding:4px 0}
+.calGrid .d{height:54px;border-radius:10px;font-size:15px;padding-top:7px;background:rgba(255,255,255,.55);color:#1f2340}
+.calGrid .d.today{background:#5b6bd6;color:#fff;font-weight:700}
+.seg{display:flex;gap:8px;margin-bottom:12px}
+.seg button{flex:1;border:0;border-radius:12px;padding:11px;font-size:16px;font-weight:700;background:#e9edf8;color:#1f2340}
+.seg button.on{background:#5b6bd6;color:#fff}
+
 /* ---------- 底部表單 ---------- */
 .sheetWrap{position:fixed;inset:0;z-index:50;background:rgba(20,25,50,.38);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:520px;max-height:90%;overflow-y:auto;background:#fff;border-radius:22px 22px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom) + 18px)}
@@ -244,7 +273,7 @@ function applyBall(){
 /* ================= 頁面設定（之後要增加/改名改這裡） ================= */
 const PAGES=[
  {id:'rank',label:'排名',title:'排名',render:renderRank},
- {id:'events',label:'活動',title:'活動',render:renderBlank},
+ {id:'events',label:'活動',title:'活動',render:renderCalendar},
  {id:'types',label:'屬性表',title:'屬性表',render:renderBlank}
 ];
 let current='home';
@@ -295,31 +324,30 @@ function openSheet(html){
 function closeSheet(){$('#sheetRoot').innerHTML=''}
 
 /* ================= 排名頁 ================= */
+const PLUS=(n,c)=>`<svg viewBox="0 0 24 24" width="${n}" height="${n}"><path d="M12 4v16M4 12h16" stroke="${c}" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+const CHECK='<svg class="ck" viewBox="0 0 24 24"><path d="M4 13l5 5L20 6" fill="none" stroke="#35e04a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const num=v=>{const n=parseFloat(v);return isNaN(n)?-1:n};
+const tcolor=k=>((TMAP[k]||TMAP.normal).c)+'d9';
+const imgOr=(x,cls)=>x.photo?`<img src="${x.photo}" alt="">`:`<span class="${cls||'noimg'}">?</span>`;
+
 function renderBlank(root,p){
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="shell">建置中…</div>`;
 }
 function modeSelect(){
   return `<div class="modeBox"><select id="modeSel" aria-label="戰鬥類型"><option value="team"${UI.mode==='team'?' selected':''}>團體戰</option><option value="max"${UI.mode==='max'?' selected':''}>極巨戰</option></select></div>`;
 }
-function renderRank(root,p){
-  p=p||PAGES[0];
-  const head=`<div class="head"><h2>${esc(p.title)}</h2>${modeSelect()}</div>`;
-  if(UI.mode!=='team'){
-    root.innerHTML=head+`<div class="shell">極巨戰：建置中…</div>`;
-    return;
-  }
-  const chips=TYPES.map(t=>`<button class="chip${UI.filter===t.k?' sel':''}" style="background:${t.c}" data-act="chip" data-k="${t.k}">${typeIcon(t.k)}<span>${t.n}</span></button>`).join('');
+function teamBody(){
   let list=DB.team.slice();
   if(UI.filter)list=list.filter(x=>x.t1===UI.filter);
-  list.sort((a,b)=>(isNaN(parseFloat(b.dps))?-1:parseFloat(b.dps))-(isNaN(parseFloat(a.dps))?-1:parseFloat(a.dps)));
+  list.sort((a,b)=>num(b.dps)-num(a.dps));
   const rows=list.map((x,i)=>{
-    const c=(TMAP[x.t1]||TMAP.normal).c+'d9';
+    const c=tcolor(x.t1);
     const own=x.owned
-      ?`<div class="cell own" style="--c:${c}" data-act="own" data-id="${x.id}"><svg class="ck" viewBox="0 0 24 24"><path d="M4 13l5 5L20 6" fill="none" stroke="#35e04a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="st"><div>HP ${esc(x.hp)}</div><div>Att ${esc(x.atk)}</div><div>Def ${esc(x.def)}</div></div></div>`
-      :`<div class="cell own" style="--c:${c}" data-act="own" data-id="${x.id}"><span class="plus"><svg viewBox="0 0 24 24" width="36" height="36"><path d="M12 4v16M4 12h16" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></span></div>`;
+      ?`<div class="cell own" style="--c:${c}" data-act="own" data-id="${x.id}">${CHECK}<div class="st"><div>HP ${esc(x.hp)}</div><div>Att ${esc(x.atk)}</div><div>Def ${esc(x.def)}</div></div></div>`
+      :`<div class="cell own" style="--c:${c}" data-act="own" data-id="${x.id}"><span class="plus">${PLUS(36,'#fff')}</span></div>`;
     return `<div class="row">
       <div class="cell rank" style="--c:${c}">${i+1}</div>
-      <div class="cell photo" style="--c:${c}" data-act="edit" data-id="${x.id}">${x.photo?`<img src="${x.photo}" alt="">`:'<span class="noimg">?</span>'}</div>
+      <div class="cell photo" style="--c:${c}" data-act="edit" data-id="${x.id}">${imgOr(x)}</div>
       <div class="cell info" style="--c:${c}" data-act="edit" data-id="${x.id}">
         <div class="nm">${esc(x.name)||'（未命名）'}</div>
         <div>小招${x.fast?' '+esc(x.fast):''}</div>
@@ -330,9 +358,65 @@ function renderRank(root,p){
     </div>`;
   }).join('');
   const empty=list.length?'':`<div class="empty">${DB.team.length?'這個屬性還沒有寶可夢':'還沒有資料，點左下角的 + 新增'}</div>`;
-  root.innerHTML=head+`<div class="chips${UI.filter?' filtering':''}">${chips}</div>
-    <div class="list">${rows}${empty}<div class="addRow"><button class="addBtn" data-act="add" aria-label="新增寶可夢"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div></div>`;
+  return rows+empty;
 }
+function maxCell(x,kind){
+  if(!x)return '<div class="cell mx blank"></div>';
+  return `<div class="cell mx" style="--c:${tcolor(x.t1)}" data-act="edit" data-id="${x.id}">
+    <div class="mph">${imgOr(x)}</div>
+    <div class="nm">${esc(x.name)||'（未命名）'}</div>
+    <div>${esc(x.form)}</div>
+    <div>${kind==='atk'?'打手':'坦克'}：${esc(x.value)}</div>
+  </div>`;
+}
+function ownHalf(x,label){
+  if(!x)return '<div class="half blank"></div>';
+  const c=tcolor(x.t1);
+  if(x.owned)return `<div class="half" style="--c:${c}" data-act="own" data-id="${x.id}"><div class="ln">${CHECK}<span>${label}</span></div><div>${esc(x.hp)} / ${esc(x.atk)} / ${esc(x.def)}</div></div>`;
+  return `<div class="half" style="--c:${c}" data-act="own" data-id="${x.id}"><span class="plus">${PLUS(30,'#fff')}</span></div>`;
+}
+function maxBody(){
+  const f=x=>!UI.filter||x.t1===UI.filter;
+  const atk=DB.max.filter(x=>x.kind!=='tank'&&f(x)).sort((a,b)=>num(b.value)-num(a.value));
+  const tank=DB.max.filter(x=>x.kind==='tank'&&f(x)).sort((a,b)=>num(b.value)-num(a.value));
+  const n=Math.max(atk.length,tank.length);
+  let rows='';
+  for(let i=0;i<n;i++){
+    rows+=`<div class="row max">
+      <div class="cell rank" style="--c:rgba(70,80,120,.78)">${i+1}</div>
+      ${maxCell(atk[i],'atk')}
+      ${maxCell(tank[i],'tank')}
+      <div class="ownMax">${ownHalf(atk[i],'打手')}${ownHalf(tank[i],'坦克')}</div>
+    </div>`;
+  }
+  const empty=n?'':`<div class="empty">${DB.max.length?'這個屬性還沒有寶可夢':'還沒有資料，點左下角的 + 新增'}</div>`;
+  return rows+empty;
+}
+function renderRank(root,p){
+  p=p||PAGES[0];
+  const head=`<div class="head"><h2>${esc(p.title)}</h2>${modeSelect()}</div>`;
+  const chips=TYPES.map(t=>`<button class="chip${UI.filter===t.k?' sel':''}" style="background:${t.c}" data-act="chip" data-k="${t.k}">${typeIcon(t.k)}<span>${t.n}</span></button>`).join('');
+  const body=UI.mode==='team'?teamBody():maxBody();
+  root.innerHTML=head+`<div class="chips${UI.filter?' filtering':''}">${chips}</div>
+    <div class="list">${body}<div class="addRow"><button class="addBtn" data-act="add" aria-label="新增寶可夢"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div></div>`;
+}
+
+/* ================= 活動頁（日曆） ================= */
+const CAL={y:new Date().getFullYear(),m:new Date().getMonth()};
+function renderCalendar(root,p){
+  p=p||PAGES.find(x=>x.id==='events');
+  const start=new Date(CAL.y,CAL.m,1).getDay(),days=new Date(CAL.y,CAL.m+1,0).getDate(),now=new Date();
+  let cells='';
+  ['日','一','二','三','四','五','六'].forEach(w=>cells+=`<div class="wk">${w}</div>`);
+  for(let i=0;i<start;i++)cells+='<div></div>';
+  for(let d=1;d<=days;d++){
+    const t=d===now.getDate()&&CAL.m===now.getMonth()&&CAL.y===now.getFullYear();
+    cells+=`<div class="d${t?' today':''}">${d}</div>`;
+  }
+  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div>
+    <div class="cal"><div class="calHead"><button class="calBtn" data-act="calPrev" aria-label="上個月">‹</button><b>${CAL.y} 年 ${CAL.m+1} 月</b><button class="calBtn" data-act="calNext" aria-label="下個月">›</button></div><div class="calGrid">${cells}</div></div>`;
+}
+
 $('#page').addEventListener('click',e=>{
   const t=e.target.closest('[data-act]');if(!t)return;
   const a=t.dataset.act;
@@ -340,6 +424,7 @@ $('#page').addEventListener('click',e=>{
   else if(a==='add')openEdit(null);
   else if(a==='edit')openEdit(t.dataset.id);
   else if(a==='own')openOwn(t.dataset.id);
+  else if(a==='calPrev'||a==='calNext'){CAL.m+=a==='calNext'?1:-1;if(CAL.m<0){CAL.m=11;CAL.y--}if(CAL.m>11){CAL.m=0;CAL.y++}renderCalendar($('#page'))}
 });
 $('#page').addEventListener('change',e=>{
   if(e.target.id==='modeSel'){UI.mode=e.target.value;UI.filter=null;renderRank($('#page'))}
@@ -366,24 +451,33 @@ function readImage(file){
     fr.readAsDataURL(file);
   });
 }
-function typeOpts(sel,withNone){
-  return (withNone?`<option value="">無</option>`:'')+TYPES.map(t=>`<option value="${t.k}"${t.k===sel?' selected':''}>${t.n}</option>`).join('');
+function typeOpts(sel){
+  return TYPES.map(t=>`<option value="${t.k}"${t.k===sel?' selected':''}>${t.n}</option>`).join('');
 }
 function openEdit(id){
-  const old=id?DB.team.find(x=>x.id===id):null;
-  const d=old||{name:'',photo:'',t1:'normal',t2:'',fast:'',charged:'',dps:'',owned:false,hp:'',atk:'',def:''};
-  let photo=d.photo||'';
+  const mode=UI.mode,isMax=mode==='max';
+  const old=id?DB[mode].find(x=>x.id===id):null;
+  const d=old||(isMax
+    ?{kind:'atk',name:'',photo:'',t1:'normal',form:'極巨化',value:'',owned:false,hp:'',atk:'',def:''}
+    :{name:'',photo:'',t1:'normal',t2:'',fast:'',charged:'',dps:'',owned:false,hp:'',atk:'',def:''});
+  let photo=d.photo||'',kind=d.kind==='tank'?'tank':'atk';
+  const seg=isMax?`<div class="seg" id="seg"><button type="button" data-k="atk" class="${kind==='atk'?'on':''}">打手</button><button type="button" data-k="tank" class="${kind==='tank'?'on':''}">坦克</button></div>`:'';
+  const specific=isMax
+    ?`<label class="f"><span>形態</span><select id="fForm"><option value="極巨化"${d.form!=='超極巨化'?' selected':''}>極巨化</option><option value="超極巨化"${d.form==='超極巨化'?' selected':''}>超極巨化</option></select></label>
+      <label class="f"><span id="valLbl">${kind==='atk'?'打手':'坦克'}數值</span><input id="fValue" type="number" step="any" inputmode="decimal" value="${esc(d.value)}"></label>`
+    :`<div class="f2">
+        <label class="f"><span>小招</span><input id="fFast" value="${esc(d.fast)}" autocomplete="off"></label>
+        <label class="f"><span>大招</span><input id="fCharged" value="${esc(d.charged)}" autocomplete="off"></label>
+      </div>
+      <label class="f"><span>DPS</span><input id="fDps" type="number" step="any" inputmode="decimal" value="${esc(d.dps)}"></label>`;
   const s=openSheet(`
     <h3>${old?'編輯寶可夢':'新增寶可夢'}</h3>
+    ${seg}
     <div class="photoPick"><div class="pv" id="pv">${photo?`<img src="${photo}" alt="">`:'無照片'}</div>
       <button class="btn" id="pickBtn" type="button">選擇照片</button><input type="file" id="photoIn" accept="image/*" hidden></div>
     <label class="f"><span>名字</span><input id="fName" value="${esc(d.name)}" autocomplete="off"></label>
-    <label class="f"><span>屬性</span><select id="fT1">${typeOpts(d.t1,false)}</select></label>
-    <div class="f2">
-      <label class="f"><span>小招</span><input id="fFast" value="${esc(d.fast)}" autocomplete="off"></label>
-      <label class="f"><span>大招</span><input id="fCharged" value="${esc(d.charged)}" autocomplete="off"></label>
-    </div>
-    <label class="f"><span>DPS</span><input id="fDps" type="number" step="any" inputmode="decimal" value="${esc(d.dps)}"></label>
+    <label class="f"><span>屬性</span><select id="fT1">${typeOpts(d.t1)}</select></label>
+    ${specific}
     <label class="chk"><input type="checkbox" id="fOwned"${d.owned?' checked':''}> 我有這隻</label>
     <div class="f3">
       <label class="f"><span>HP</span><input id="fHp" type="number" inputmode="numeric" value="${esc(d.hp)}"></label>
@@ -392,33 +486,41 @@ function openEdit(id){
     </div>
     <div class="btns">${old?'<button class="btn del" id="delBtn">刪除</button>':''}<button class="btn" id="cancelBtn">取消</button><button class="btn main" id="saveBtn">儲存</button></div>`);
   const q=x=>s.querySelector(x);
+  if(isMax)q('#seg').onclick=e=>{
+    const b=e.target.closest('button');if(!b)return;
+    kind=b.dataset.k;
+    s.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b));
+    q('#valLbl').textContent=(kind==='atk'?'打手':'坦克')+'數值';
+  };
   q('#pickBtn').onclick=()=>q('#photoIn').click();
   q('#photoIn').onchange=async e=>{
     const f=e.target.files[0];if(!f)return;
     try{photo=await readImage(f);q('#pv').innerHTML=`<img src="${photo}" alt="">`}catch(err){alert('照片讀取失敗')}
   };
   q('#cancelBtn').onclick=closeSheet;
-  if(old)q('#delBtn').onclick=()=>{if(confirm('確定刪除「'+(old.name||'這隻')+'」？')){DB.team=DB.team.filter(x=>x.id!==old.id);save();closeSheet();renderRank($('#page'))}};
+  if(old)q('#delBtn').onclick=()=>{if(confirm('確定刪除「'+(old.name||'這隻')+'」？')){DB[mode]=DB[mode].filter(x=>x.id!==old.id);save();closeSheet();renderRank($('#page'))}};
   q('#saveBtn').onclick=()=>{
     const name=q('#fName').value.trim();
     if(!name&&!photo){alert('請至少填名字或選一張照片');return}
-    const rec={
-      id:old?old.id:uid(),name,photo,
-      t1:q('#fT1').value,t2:old?(old.t2||''):'',
-      fast:q('#fFast').value.trim(),charged:q('#fCharged').value.trim(),
-      dps:q('#fDps').value.trim(),
+    const base={
+      id:old?old.id:uid(),name,photo,t1:q('#fT1').value,
       owned:q('#fOwned').checked,hp:q('#fHp').value.trim(),atk:q('#fAtk').value.trim(),def:q('#fDef').value.trim()
     };
-    if(old)DB.team[DB.team.findIndex(x=>x.id===old.id)]=rec;else DB.team.push(rec);
+    const rec=isMax
+      ?Object.assign(base,{kind,form:q('#fForm').value,value:q('#fValue').value.trim()})
+      :Object.assign(base,{t2:old?(old.t2||''):'',fast:q('#fFast').value.trim(),charged:q('#fCharged').value.trim(),dps:q('#fDps').value.trim()});
+    const arr=DB[mode];
+    if(old)arr[arr.findIndex(x=>x.id===old.id)]=rec;else arr.push(rec);
     save();closeSheet();renderRank($('#page'));
   };
 }
 
 /* ---- 快速設定「我有這隻」 ---- */
 function openOwn(id){
-  const p=DB.team.find(x=>x.id===id);if(!p)return;
+  const p=DB[UI.mode].find(x=>x.id===id);if(!p)return;
+  const role=UI.mode==='max'?(p.kind==='tank'?'（坦克）':'（打手）'):'';
   const s=openSheet(`
-    <h3>${esc(p.name)||'這隻寶可夢'}</h3>
+    <h3>${(esc(p.name)||'這隻寶可夢')+role}</h3>
     <div class="f3">
       <label class="f"><span>HP</span><input id="oHp" type="number" inputmode="numeric" value="${esc(p.hp)}"></label>
       <label class="f"><span>攻擊</span><input id="oAtk" type="number" inputmode="numeric" value="${esc(p.atk)}"></label>
@@ -435,7 +537,7 @@ function openOwn(id){
 function openBackup(){
   const s=openSheet(`
     <h3>雲朵備份</h3>
-    <p class="note">目前資料：團體戰 ${DB.team.length} 筆。<br>資料存在這支手機的瀏覽器裡，換手機或清除網站資料前，請先匯出備份。</p>
+    <p class="note">目前資料：團體戰 ${DB.team.length} 筆、極巨戰 ${DB.max.length} 筆。<br>資料存在這支手機的瀏覽器裡，換手機或清除網站資料前，請先匯出備份。</p>
     <div class="btns"><button class="btn main" id="exBtn">匯出備份</button><button class="btn" id="imBtn">匯入備份</button></div>
     <div class="btns"><button class="btn" id="bClose">關閉</button></div>`);
   s.querySelector('#exBtn').onclick=exportData;
