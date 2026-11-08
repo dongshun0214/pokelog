@@ -79,7 +79,8 @@ body:not([data-page="home"]) #menu{left:10px}
 /* ---------- 子頁面 ---------- */
 #page{position:absolute;left:0;top:0;width:100%;height:100vh;height:100dvh;display:none;flex-direction:column;padding-top:var(--top)}
 body:not([data-page="home"]) #page{display:flex}
-.head{display:flex;align-items:center;gap:10px;padding:0 22px 0 92px;height:52px;flex:none}
+.head{display:flex;align-items:center;gap:10px;padding:0 22px 0 92px;height:52px;flex:none;position:relative}
+.addBtn.rk{position:absolute;top:50%;margin-top:-20px;left:calc(30px + (100% - 54px) * 7 / 12 - 20px)}
 .head h2{margin:0;font-size:30px;font-weight:800;flex:1;color:#1f2340;letter-spacing:1px}
 .modeBox{position:relative}
 .modeBox::before{content:"";position:absolute;left:10px;top:50%;margin-top:-5px;border:7px solid transparent;border-top:9px solid #8d93a8;border-bottom:0;pointer-events:none}
@@ -98,9 +99,9 @@ body:not([data-page="home"]) #page{display:flex}
 .chips.filtering .chip{opacity:.3}
 .chips.filtering .chip.sel{opacity:1;border:4px solid rgba(0,0,0,.5)}
 .list{flex:1;overflow-y:auto;padding:10px 12px calc(env(safe-area-inset-bottom) + 24px);-webkit-overflow-scrolling:touch}
-.row{display:grid;grid-template-columns:46px 74px 1fr 86px;gap:4px;margin-bottom:4px}
+.row{display:grid;grid-template-columns:34px 74px 1fr 86px;gap:4px;margin-bottom:4px}
 .cell{background:var(--c);color:#fff;min-height:78px;border-radius:6px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
-.rank{display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800}
+.rank{display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800}
 .photo{display:flex;align-items:center;justify-content:center;padding:3px}
 .photo img{width:100%;height:100%;max-height:72px;object-fit:contain;display:block}
 .photo .noimg{font-size:26px;opacity:.6}
@@ -133,14 +134,29 @@ body:not([data-page="home"]) #page{display:flex}
 .half .ln .ck{width:17px;height:17px;margin:0}
 .half .plus{display:flex;align-items:center;justify-content:center;line-height:0}
 /* ---------- 日曆 ---------- */
-.cal{margin:8px 12px 0;padding:12px;border-radius:18px;background:rgba(255,255,255,.72)}
-.calHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.evList{padding-top:24px}
+.cal{margin:0 0 14px;padding:10px 8px 6px;border-radius:18px;background:rgba(255,255,255,.72)}
+.calHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:0 4px}
 .calHead b{font-size:18px;color:#1f2340}
 .calBtn{width:38px;height:38px;border-radius:50%;border:0;background:rgba(0,0,0,.07);font-size:22px;line-height:1;color:#1f2340;padding:0}
-.calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
-.calGrid .wk{font-size:12px;color:#6b7186;padding:4px 0}
-.calGrid .d{height:54px;border-radius:10px;font-size:15px;padding-top:7px;background:rgba(255,255,255,.55);color:#1f2340}
-.calGrid .d.today{background:#5b6bd6;color:#fff;font-weight:700}
+.wkHead{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:12px;color:#6b7186;padding:2px 0 4px}
+.wkRow{display:grid;grid-template-columns:repeat(7,1fr);row-gap:3px;align-content:start;min-height:56px;padding-bottom:6px;border-top:1px solid rgba(0,0,0,.07)}
+.dn{grid-row:1;text-align:center;font-size:14px;color:#1f2340;padding:4px 0 2px}
+.dn.out{opacity:.35}
+.dn span{display:inline-block;min-width:24px;line-height:24px;border-radius:12px}
+.dn span.today{background:#5b6bd6;color:#fff;font-weight:700}
+.bar{height:8px}
+.bar.s{border-top-left-radius:4px;border-bottom-left-radius:4px;margin-left:2px}
+.bar.e{border-top-right-radius:4px;border-bottom-right-radius:4px;margin-right:2px}
+.evCard{background:var(--c);color:#fff;border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+.evPh{width:46px;height:46px;flex:none;display:flex;align-items:center;justify-content:center}
+.evPh img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.evTx{min-width:0}
+.evT{font-size:15px;font-weight:800;word-break:break-word}
+.evD{font-size:12px;margin-top:2px}
+.sws{display:flex;gap:10px;flex-wrap:wrap}
+.swb{width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px #d7dcea;padding:0}
+.swb.on{box-shadow:0 0 0 3px rgba(0,0,0,.5)}
 .seg{display:flex;gap:8px;margin-bottom:12px}
 .seg button{flex:1;border:0;border-radius:12px;padding:11px;font-size:16px;font-weight:700;background:#e9edf8;color:#1f2340}
 .seg button.on{background:#5b6bd6;color:#fff}
@@ -196,8 +212,8 @@ function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.i
 const KEY='pokelog_v1';
 let DB=load();
 function load(){
-  try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.team))return{team:d.team,max:Array.isArray(d.max)?d.max:[]}}catch(e){}
-  return{team:[],max:[]};
+  try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.team))return{team:d.team,max:Array.isArray(d.max)?d.max:[],events:Array.isArray(d.events)?d.events:[]}}catch(e){}
+  return{team:[],max:[],events:[]};
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){alert('儲存失敗，可能是瀏覽器空間不足。請先匯出備份。')}}
 
@@ -357,7 +373,7 @@ function teamBody(){
       ${own}
     </div>`;
   }).join('');
-  const empty=list.length?'':`<div class="empty">${DB.team.length?'這個屬性還沒有寶可夢':'還沒有資料，點左下角的 + 新增'}</div>`;
+  const empty=list.length?'':`<div class="empty">${DB.team.length?'這個屬性還沒有寶可夢':'還沒有資料，點上方的 + 新增'}</div>`;
   return rows+empty;
 }
 function maxCell(x,kind){
@@ -383,38 +399,106 @@ function maxBody(){
   let rows='';
   for(let i=0;i<n;i++){
     rows+=`<div class="row max">
-      <div class="cell rank" style="--c:rgba(70,80,120,.78)">${i+1}</div>
+      <div class="cell rank" style="--c:${UI.filter?tcolor(UI.filter):'rgba(70,80,120,.78)'}">${i+1}</div>
       ${maxCell(atk[i],'atk')}
       ${maxCell(tank[i],'tank')}
       <div class="ownMax">${ownHalf(atk[i],'打手')}${ownHalf(tank[i],'坦克')}</div>
     </div>`;
   }
-  const empty=n?'':`<div class="empty">${DB.max.length?'這個屬性還沒有寶可夢':'還沒有資料，點左下角的 + 新增'}</div>`;
+  const empty=n?'':`<div class="empty">${DB.max.length?'這個屬性還沒有寶可夢':'還沒有資料，點上方的 + 新增'}</div>`;
   return rows+empty;
 }
 function renderRank(root,p){
   p=p||PAGES[0];
-  const head=`<div class="head"><h2>${esc(p.title)}</h2>${modeSelect()}</div>`;
+  const head=`<div class="head"><h2>${esc(p.title)}</h2><button class="addBtn rk" data-act="add" aria-label="新增寶可夢"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>${modeSelect()}</div>`;
   const chips=TYPES.map(t=>`<button class="chip${UI.filter===t.k?' sel':''}" style="background:${t.c}" data-act="chip" data-k="${t.k}">${typeIcon(t.k)}<span>${t.n}</span></button>`).join('');
   const body=UI.mode==='team'?teamBody():maxBody();
   root.innerHTML=head+`<div class="chips${UI.filter?' filtering':''}">${chips}</div>
-    <div class="list">${body}<div class="addRow"><button class="addBtn" data-act="add" aria-label="新增寶可夢"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div></div>`;
+    <div class="list">${body}</div>`;
 }
 
-/* ================= 活動頁（日曆） ================= */
+/* ================= 活動頁（甘特式月曆） ================= */
 const CAL={y:new Date().getFullYear(),m:new Date().getMonth()};
+const EV_COLORS=['#d9748a','#e08f4f','#c9a227','#4fa87a','#3f9fb8','#5f82d6','#8f6fcf','#c569b0'];
+const DAY=864e5;
+const pd=s=>{const a=s.split('-').map(Number);return Date.UTC(a[0],a[1]-1,a[2])};
+const iso=ms=>new Date(ms).toISOString().slice(0,10);
+const md=s=>{const a=s.split('-').map(Number);return a[1]+'/'+a[2]};
 function renderCalendar(root,p){
   p=p||PAGES.find(x=>x.id==='events');
-  const start=new Date(CAL.y,CAL.m,1).getDay(),days=new Date(CAL.y,CAL.m+1,0).getDate(),now=new Date();
-  let cells='';
-  ['日','一','二','三','四','五','六'].forEach(w=>cells+=`<div class="wk">${w}</div>`);
-  for(let i=0;i<start;i++)cells+='<div></div>';
-  for(let d=1;d<=days;d++){
-    const t=d===now.getDate()&&CAL.m===now.getMonth()&&CAL.y===now.getFullYear();
-    cells+=`<div class="d${t?' today':''}">${d}</div>`;
+  const first=Date.UTC(CAL.y,CAL.m,1),dim=new Date(Date.UTC(CAL.y,CAL.m+1,0)).getUTCDate();
+  const off=new Date(first).getUTCDay(),weeks=Math.ceil((off+dim)/7),gs=first-off*DAY;
+  const evs=DB.events.slice().sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:(pd(b.end)-pd(b.start))-(pd(a.end)-pd(a.start)));
+  const today=todayStr();
+  let grid='';
+  for(let w=0;w<weeks;w++){
+    const ws=gs+w*7*DAY,wsS=iso(ws),weS=iso(ws+6*DAY);
+    let cells='';
+    for(let i=0;i<7;i++){
+      const ms=ws+i*DAY,s=iso(ms),inM=new Date(ms).getUTCMonth()===CAL.m;
+      cells+=`<div class="dn${inM?'':' out'}" style="grid-column:${i+1}"><span class="${s===today?'today':''}">${new Date(ms).getUTCDate()}</span></div>`;
+    }
+    const lanes=[];let bars='';
+    evs.filter(e=>e.start<=weS&&e.end>=wsS).forEach(e=>{
+      const sc=Math.max(0,Math.round((pd(e.start)-ws)/DAY)),ec=Math.min(6,Math.round((pd(e.end)-ws)/DAY));
+      let l=lanes.findIndex(last=>last<sc);
+      if(l<0){l=lanes.length;lanes.push(-1)}
+      lanes[l]=ec;
+      const cls='bar'+(e.start>=wsS?' s':'')+(e.end<=weS?' e':'');
+      bars+=`<div class="${cls}" style="grid-column:${sc+1}/${ec+2};grid-row:${l+2};background:${e.color}"></div>`;
+    });
+    grid+=`<div class="wkRow">${cells}${bars}</div>`;
   }
-  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div>
-    <div class="cal"><div class="calHead"><button class="calBtn" data-act="calPrev" aria-label="上個月">‹</button><b>${CAL.y} 年 ${CAL.m+1} 月</b><button class="calBtn" data-act="calNext" aria-label="下個月">›</button></div><div class="calGrid">${cells}</div></div>`;
+  const ms0=iso(first),ms1=iso(first+(dim-1)*DAY);
+  const list=evs.filter(e=>e.start<=ms1&&e.end>=ms0);
+  const cards=list.map(e=>`<div class="evCard" style="--c:${e.color}" data-act="evEdit" data-id="${e.id}">
+      ${e.photo?`<div class="evPh"><img src="${e.photo}" alt=""></div>`:''}
+      <div class="evTx"><div class="evT">${esc(e.text)||'（未填內容）'}</div>
+      <div class="evD">${md(e.start)}${e.end!==e.start?' – '+md(e.end):''}${e.mon?'　主題：'+esc(e.mon):''}</div></div>
+    </div>`).join('')||'<div class="empty">這個月沒有活動</div>';
+  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2><button class="addBtn" data-act="evAdd" aria-label="新增活動"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
+    <div class="list evList"><div class="cal">
+      <div class="calHead"><button class="calBtn" data-act="calPrev" aria-label="上個月">‹</button><b>${CAL.y} 年 ${CAL.m+1} 月</b><button class="calBtn" data-act="calNext" aria-label="下個月">›</button></div>
+      <div class="wkHead">${['日','一','二','三','四','五','六'].map(w=>`<div>${w}</div>`).join('')}</div>
+      ${grid}</div>${cards}</div>`;
+}
+function openEvent(id){
+  const old=id?DB.events.find(x=>x.id===id):null;
+  const d=old||{start:todayStr(),end:todayStr(),text:'',mon:'',photo:'',color:EV_COLORS[DB.events.length%EV_COLORS.length]};
+  let photo=d.photo||'',color=d.color;
+  const sw=EV_COLORS.map(c=>`<button type="button" class="swb${c===color?' on':''}" data-c="${c}" style="background:${c}" aria-label="顏色"></button>`).join('');
+  const s=openSheet(`
+    <h3>${old?'編輯活動':'新增活動'}</h3>
+    <div class="f2">
+      <label class="f"><span>開始日期</span><input id="eS" type="date" value="${esc(d.start)}"></label>
+      <label class="f"><span>結束日期</span><input id="eE" type="date" value="${esc(d.end)}"></label>
+    </div>
+    <label class="f"><span>活動內容</span><input id="eT" value="${esc(d.text)}" autocomplete="off"></label>
+    <label class="f"><span>主題寶可夢（可不填）</span><input id="eM" value="${esc(d.mon)}" autocomplete="off"></label>
+    <div class="photoPick"><div class="pv" id="pv">${photo?`<img src="${photo}" alt="">`:'無照片'}</div>
+      <button class="btn" id="pickBtn" type="button">選擇照片</button><button class="btn" id="clrBtn" type="button">移除</button><input type="file" id="photoIn" accept="image/*" hidden></div>
+    <div class="f"><span>活動顏色</span><div class="sws" id="sws">${sw}</div></div>
+    <div class="btns">${old?'<button class="btn del" id="delBtn">刪除</button>':''}<button class="btn" id="cancelBtn">取消</button><button class="btn main" id="saveBtn">儲存</button></div>`);
+  const q=x=>s.querySelector(x);
+  q('#sws').onclick=e=>{const b=e.target.closest('.swb');if(!b)return;color=b.dataset.c;s.querySelectorAll('.swb').forEach(x=>x.classList.toggle('on',x===b))};
+  q('#pickBtn').onclick=()=>q('#photoIn').click();
+  q('#clrBtn').onclick=()=>{photo='';q('#pv').textContent='無照片'};
+  q('#photoIn').onchange=async e=>{
+    const f=e.target.files[0];if(!f)return;
+    try{photo=await readImage(f);q('#pv').innerHTML=`<img src="${photo}" alt="">`}catch(err){alert('照片讀取失敗')}
+  };
+  q('#eS').onchange=()=>{if(!q('#eE').value||q('#eE').value<q('#eS').value)q('#eE').value=q('#eS').value};
+  q('#cancelBtn').onclick=closeSheet;
+  if(old)q('#delBtn').onclick=()=>{if(confirm('確定刪除這個活動？')){DB.events=DB.events.filter(x=>x.id!==old.id);save();closeSheet();renderCalendar($('#page'))}};
+  q('#saveBtn').onclick=()=>{
+    const st=q('#eS').value,en=q('#eE').value||st;
+    if(!st){alert('請選開始日期');return}
+    if(en<st){alert('結束日期不能早於開始日期');return}
+    const rec={id:old?old.id:uid(),start:st,end:en,text:q('#eT').value.trim(),mon:q('#eM').value.trim(),photo,color};
+    if(old)DB.events[DB.events.findIndex(x=>x.id===old.id)]=rec;else DB.events.push(rec);
+    const a=st.split('-').map(Number);CAL.y=a[0];CAL.m=a[1]-1;
+    save();closeSheet();renderCalendar($('#page'));
+  };
 }
 
 $('#page').addEventListener('click',e=>{
@@ -424,6 +508,8 @@ $('#page').addEventListener('click',e=>{
   else if(a==='add')openEdit(null);
   else if(a==='edit')openEdit(t.dataset.id);
   else if(a==='own')openOwn(t.dataset.id);
+  else if(a==='evAdd')openEvent(null);
+  else if(a==='evEdit')openEvent(t.dataset.id);
   else if(a==='calPrev'||a==='calNext'){CAL.m+=a==='calNext'?1:-1;if(CAL.m<0){CAL.m=11;CAL.y--}if(CAL.m>11){CAL.m=0;CAL.y++}renderCalendar($('#page'))}
 });
 $('#page').addEventListener('change',e=>{
@@ -537,7 +623,7 @@ function openOwn(id){
 function openBackup(){
   const s=openSheet(`
     <h3>雲朵備份</h3>
-    <p class="note">目前資料：團體戰 ${DB.team.length} 筆、極巨戰 ${DB.max.length} 筆。<br>資料存在這支手機的瀏覽器裡，換手機或清除網站資料前，請先匯出備份。</p>
+    <p class="note">目前資料：團體戰 ${DB.team.length} 筆、極巨戰 ${DB.max.length} 筆、活動 ${DB.events.length} 筆。<br>資料存在這支手機的瀏覽器裡，換手機或清除網站資料前，請先匯出備份。</p>
     <div class="btns"><button class="btn main" id="exBtn">匯出備份</button><button class="btn" id="imBtn">匯入備份</button></div>
     <div class="btns"><button class="btn" id="bClose">關閉</button></div>`);
   s.querySelector('#exBtn').onclick=exportData;
@@ -565,7 +651,7 @@ $('#importFile').addEventListener('change',e=>{
       const d=j&&j.data?j.data:j;
       if(!d||!Array.isArray(d.team))throw new Error('format');
       if(!confirm('匯入會取代目前的資料（團體戰 '+d.team.length+' 筆），確定嗎？'))return;
-      DB={team:d.team,max:Array.isArray(d.max)?d.max:[]};
+      DB={team:d.team,max:Array.isArray(d.max)?d.max:[],events:Array.isArray(d.events)?d.events:[]};
       save();closeSheet();
       if(current!=='home'){const p=PAGES.find(x=>x.id===current);p.render($('#page'),p)}
       alert('匯入完成');
