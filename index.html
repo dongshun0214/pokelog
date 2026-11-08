@@ -152,8 +152,8 @@ body:not([data-page="home"]) #page{display:flex}
 .evPh{width:46px;height:46px;flex:none;display:flex;align-items:center;justify-content:center}
 .evPh img{max-width:100%;max-height:100%;object-fit:contain;display:block}
 .evTx{min-width:0}
-.evT{font-size:15px;font-weight:800;word-break:break-word}
-.evD{font-size:12px;margin-top:2px}
+.evL1{font-size:15px;font-weight:800}
+.evL{font-size:14px;margin-top:2px;word-break:break-word}
 .sws{display:flex;gap:10px;flex-wrap:wrap}
 .swb{width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px #d7dcea;padding:0}
 .swb.on{box-shadow:0 0 0 3px rgba(0,0,0,.5)}
@@ -424,6 +424,18 @@ const DAY=864e5;
 const pd=s=>{const a=s.split('-').map(Number);return Date.UTC(a[0],a[1]-1,a[2])};
 const iso=ms=>new Date(ms).toISOString().slice(0,10);
 const md=s=>{const a=s.split('-').map(Number);return a[1]+'/'+a[2]};
+function dateText(e){
+  const a=e.start.split('-').map(Number),b=e.end.split('-').map(Number);
+  if(e.start===e.end)return a[1]+'/'+a[2];
+  if(a[0]===b[0]&&a[1]===b[1])return a[1]+'/'+a[2]+'-'+b[2];
+  return a[1]+'/'+a[2]+'-'+b[1]+'/'+b[2];
+}
+function timeText(e){
+  const s=e.sTime||'',t=e.eTime||'';
+  if(!s&&!t)return '';
+  const end=(t==='00:00'&&s&&s!=='00:00')?'24:00':t;
+  return s&&end?s+'-'+end:(s||end);
+}
 function renderCalendar(root,p){
   p=p||PAGES.find(x=>x.id==='events');
   const first=Date.UTC(CAL.y,CAL.m,1),dim=new Date(Date.UTC(CAL.y,CAL.m+1,0)).getUTCDate();
@@ -453,8 +465,9 @@ function renderCalendar(root,p){
   const list=evs.filter(e=>e.start<=ms1&&e.end>=ms0);
   const cards=list.map(e=>`<div class="evCard" style="--c:${e.color}" data-act="evEdit" data-id="${e.id}">
       ${e.photo?`<div class="evPh"><img src="${e.photo}" alt=""></div>`:''}
-      <div class="evTx"><div class="evT">${esc(e.text)||'（未填內容）'}</div>
-      <div class="evD">${md(e.start)}${e.end!==e.start?' – '+md(e.end):''}${e.mon?'　主題：'+esc(e.mon):''}</div></div>
+      <div class="evTx"><div class="evL1">${dateText(e)}${timeText(e)?' '+timeText(e):''}</div>
+      ${e.mon?`<div class="evL">${esc(e.mon)}</div>`:''}
+      ${e.text?`<div class="evL">${esc(e.text)}</div>`:''}</div>
     </div>`).join('')||'<div class="empty">這個月沒有活動</div>';
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2><button class="addBtn" data-act="evAdd" aria-label="新增活動"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
     <div class="list evList"><div class="cal">
@@ -464,7 +477,7 @@ function renderCalendar(root,p){
 }
 function openEvent(id){
   const old=id?DB.events.find(x=>x.id===id):null;
-  const d=old||{start:todayStr(),end:todayStr(),text:'',mon:'',photo:'',color:EV_COLORS[DB.events.length%EV_COLORS.length]};
+  const d=old||{start:todayStr(),end:todayStr(),sTime:'',eTime:'',text:'',mon:'',photo:'',color:EV_COLORS[DB.events.length%EV_COLORS.length]};
   let photo=d.photo||'',color=d.color;
   const sw=EV_COLORS.map(c=>`<button type="button" class="swb${c===color?' on':''}" data-c="${c}" style="background:${c}" aria-label="顏色"></button>`).join('');
   const s=openSheet(`
@@ -472,6 +485,10 @@ function openEvent(id){
     <div class="f2">
       <label class="f"><span>開始日期</span><input id="eS" type="date" value="${esc(d.start)}"></label>
       <label class="f"><span>結束日期</span><input id="eE" type="date" value="${esc(d.end)}"></label>
+    </div>
+    <div class="f2">
+      <label class="f"><span>開始時間（可不填）</span><input id="eST" type="time" value="${esc(d.sTime)}"></label>
+      <label class="f"><span>結束時間（可不填）</span><input id="eET" type="time" value="${esc(d.eTime)}"></label>
     </div>
     <label class="f"><span>活動內容</span><input id="eT" value="${esc(d.text)}" autocomplete="off"></label>
     <label class="f"><span>主題寶可夢（可不填）</span><input id="eM" value="${esc(d.mon)}" autocomplete="off"></label>
@@ -494,7 +511,7 @@ function openEvent(id){
     const st=q('#eS').value,en=q('#eE').value||st;
     if(!st){alert('請選開始日期');return}
     if(en<st){alert('結束日期不能早於開始日期');return}
-    const rec={id:old?old.id:uid(),start:st,end:en,text:q('#eT').value.trim(),mon:q('#eM').value.trim(),photo,color};
+    const rec={id:old?old.id:uid(),start:st,end:en,sTime:q('#eST').value,eTime:q('#eET').value,text:q('#eT').value.trim(),mon:q('#eM').value.trim(),photo,color};
     if(old)DB.events[DB.events.findIndex(x=>x.id===old.id)]=rec;else DB.events.push(rec);
     const a=st.split('-').map(Number);CAL.y=a[0];CAL.m=a[1]-1;
     save();closeSheet();renderCalendar($('#page'));
