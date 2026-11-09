@@ -417,9 +417,10 @@ function modeSelect(){
 function teamBody(){
   let list=DB.team.slice();
   if(UI.filter)list=list.filter(x=>x.t1===UI.filter);
-  if(UI.q)list=list.filter(x=>fuzzy(x.name,UI.q));
   list.sort((a,b)=>num(b.dps)-num(a.dps));
-  const rows=list.map((x,i)=>{
+  // 排名只看屬性篩選，搜尋只是把不符合的藏起來，名次不變
+  const ranked=list.map((x,i)=>({x,i})).filter(o=>!UI.q||fuzzy(o.x.name,UI.q));
+  const rows=ranked.map(({x,i})=>{
     const c=tcolor(x.t1);
     const own=x.owned
       ?`<div class="cell own" style="--c:${c}" data-act="own" data-id="${x.id}">${CHECK}<div class="st"><div>HP ${esc(x.hp)}</div><div>Att ${esc(x.atk)}</div><div>Def ${esc(x.def)}</div></div></div>`
@@ -436,7 +437,7 @@ function teamBody(){
       ${own}
     </div>`;
   }).join('');
-  const empty=list.length?'':`<div class="empty">${DB.team.length?'沒有符合的寶可夢':'還沒有資料，點上方的 + 新增'}</div>`;
+  const empty=ranked.length?'':`<div class="empty">${DB.team.length?'沒有符合的寶可夢':'還沒有資料，點上方的 + 新增'}</div>`;
   return rows+empty;
 }
 function maxCell(x,kind){
@@ -455,20 +456,25 @@ function ownHalf(x,label){
   return `<div class="half" style="--c:${c}" data-act="own" data-id="${x.id}"><span class="plus">${PLUS(30,'#fff')}</span></div>`;
 }
 function maxBody(){
-  const f=x=>(!UI.filter||x.t1===UI.filter)&&fuzzy(x.name,UI.q);
+  const f=x=>!UI.filter||x.t1===UI.filter;
   const atk=DB.max.filter(x=>x.kind!=='tank'&&f(x)).sort((a,b)=>num(b.value)-num(a.value));
   const tank=DB.max.filter(x=>x.kind==='tank'&&f(x)).sort((a,b)=>num(b.value)-num(a.value));
   const n=Math.max(atk.length,tank.length);
-  let rows='';
+  let rows='',shown=0;
   for(let i=0;i<n;i++){
+    // 名次依屬性篩選後的排行；搜尋只隱藏不符合的，名次不變
+    const A=atk[i]&&(!UI.q||fuzzy(atk[i].name,UI.q))?atk[i]:undefined;
+    const T=tank[i]&&(!UI.q||fuzzy(tank[i].name,UI.q))?tank[i]:undefined;
+    if(!A&&!T)continue;
+    shown++;
     rows+=`<div class="row max">
       <div class="cell rank" style="--c:${UI.filter?tcolor(UI.filter):'rgba(70,80,120,.78)'}">${i+1}</div>
-      ${maxCell(atk[i],'atk')}
-      ${maxCell(tank[i],'tank')}
-      <div class="ownMax">${ownHalf(atk[i],'打手')}${ownHalf(tank[i],'坦克')}</div>
+      ${maxCell(A,'atk')}
+      ${maxCell(T,'tank')}
+      <div class="ownMax">${ownHalf(A,'打手')}${ownHalf(T,'坦克')}</div>
     </div>`;
   }
-  const empty=n?'':`<div class="empty">${DB.max.length?'沒有符合的寶可夢':'還沒有資料，點上方的 + 新增'}</div>`;
+  const empty=shown?'':`<div class="empty">${DB.max.length?'沒有符合的寶可夢':'還沒有資料，點上方的 + 新增'}</div>`;
   return rows+empty;
 }
 function renderRank(root,p){
