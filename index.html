@@ -162,6 +162,19 @@ body:not([data-page="home"]) #page{display:flex}
 .seg button{flex:1;border:0;border-radius:12px;padding:11px;font-size:16px;font-weight:700;background:#e9edf8;color:#1f2340}
 .seg button.on{background:#5b6bd6;color:#fff}
 
+/* ---------- 搜尋 / 屬性表 ---------- */
+.sbar{position:relative;padding:0 12px 10px;flex:none}
+.sbar svg{position:absolute;left:25px;top:11px;width:18px;height:18px;pointer-events:none}
+.sbar input{width:100%;height:40px;border:0;border-radius:20px;background:rgba(255,255,255,.78);padding:0 14px 0 38px;font-family:inherit;font-size:16px;color:#1f2340;-webkit-appearance:none;appearance:none;outline:none}
+.sbar input::placeholder{color:#8d93a8}
+.trow{display:grid;grid-template-columns:68px minmax(0,1fr) minmax(0,1fr);gap:4px;margin-bottom:4px}
+.thead{font-size:13px;font-weight:700;color:#3a3f5c;text-align:center;padding:0 0 2px}
+.tcell{border-radius:6px;min-height:40px}
+.tname{background:var(--c);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.35);padding:4px 0}
+.tname svg{width:16px;height:16px}
+.tlist{background:rgba(255,255,255,.72);display:flex;flex-wrap:wrap;gap:4px;align-content:center;padding:5px}
+.tp{color:#fff;font-size:11px;font-weight:700;line-height:1;padding:4px 7px;border-radius:10px;text-shadow:0 1px 1px rgba(0,0,0,.3);white-space:nowrap}
+.tnone{color:#8d93a8;padding:0 4px}
 /* ---------- 底部表單 ---------- */
 .sheetWrap{position:fixed;inset:0;z-index:50;background:rgba(20,25,50,.38);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:520px;max-height:90%;overflow-y:auto;background:#fff;border-radius:22px 22px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom) + 18px)}
@@ -330,10 +343,10 @@ function applyBall(){
 const PAGES=[
  {id:'rank',label:'排名',title:'排名',render:renderRank},
  {id:'events',label:'活動',title:'活動',render:renderCalendar},
- {id:'types',label:'屬性表',title:'屬性表',render:renderBlank}
+ {id:'types',label:'屬性表',title:'屬性表',render:renderTypes}
 ];
 let current='home';
-const UI={mode:'team',filter:null};
+const UI={mode:'team',filter:null,q:''};
 
 function go(id){
   current=id;
@@ -341,7 +354,7 @@ function go(id){
   closeMenu();applyBall();
   if(id==='home'){$('#page').innerHTML='';return}
   const p=PAGES.find(x=>x.id===id);
-  if(id==='rank'){UI.filter=null}
+  if(id==='rank'){UI.filter=null;UI.q=''}
   p.render($('#page'),p);
   const l=$('#page .list');if(l)l.scrollTop=0;
 }
@@ -384,6 +397,15 @@ const PLUS=(n,c)=>`<svg viewBox="0 0 24 24" width="${n}" height="${n}"><path d="
 const CHECK='<svg class="ck" viewBox="0 0 24 24"><path d="M4 13l5 5L20 6" fill="none" stroke="#35e04a" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const num=v=>{const n=parseFloat(v);return isNaN(n)?-1:n};
 const tcolor=k=>((TMAP[k]||TMAP.normal).c)+'d9';
+function fuzzy(name,q){
+  const qa=[...String(q||'').toLowerCase().replace(/\s+/g,'')];
+  if(!qa.length)return true;
+  const n=String(name||'').toLowerCase().replace(/\s+/g,'');
+  if(n.includes(qa.join('')))return true;
+  let i=0;
+  for(const ch of n){if(ch===qa[i])i++;if(i===qa.length)return true}
+  return false;
+}
 const imgOr=(x,cls)=>x.photo?`<img src="${x.photo}" alt="">`:`<span class="${cls||'noimg'}">?</span>`;
 
 function renderBlank(root,p){
@@ -395,6 +417,7 @@ function modeSelect(){
 function teamBody(){
   let list=DB.team.slice();
   if(UI.filter)list=list.filter(x=>x.t1===UI.filter);
+  if(UI.q)list=list.filter(x=>fuzzy(x.name,UI.q));
   list.sort((a,b)=>num(b.dps)-num(a.dps));
   const rows=list.map((x,i)=>{
     const c=tcolor(x.t1);
@@ -413,7 +436,7 @@ function teamBody(){
       ${own}
     </div>`;
   }).join('');
-  const empty=list.length?'':`<div class="empty">${DB.team.length?'這個屬性還沒有寶可夢':'還沒有資料，點上方的 + 新增'}</div>`;
+  const empty=list.length?'':`<div class="empty">${DB.team.length?'沒有符合的寶可夢':'還沒有資料，點上方的 + 新增'}</div>`;
   return rows+empty;
 }
 function maxCell(x,kind){
@@ -432,7 +455,7 @@ function ownHalf(x,label){
   return `<div class="half" style="--c:${c}" data-act="own" data-id="${x.id}"><span class="plus">${PLUS(30,'#fff')}</span></div>`;
 }
 function maxBody(){
-  const f=x=>!UI.filter||x.t1===UI.filter;
+  const f=x=>(!UI.filter||x.t1===UI.filter)&&fuzzy(x.name,UI.q);
   const atk=DB.max.filter(x=>x.kind!=='tank'&&f(x)).sort((a,b)=>num(b.value)-num(a.value));
   const tank=DB.max.filter(x=>x.kind==='tank'&&f(x)).sort((a,b)=>num(b.value)-num(a.value));
   const n=Math.max(atk.length,tank.length);
@@ -445,7 +468,7 @@ function maxBody(){
       <div class="ownMax">${ownHalf(atk[i],'打手')}${ownHalf(tank[i],'坦克')}</div>
     </div>`;
   }
-  const empty=n?'':`<div class="empty">${DB.max.length?'這個屬性還沒有寶可夢':'還沒有資料，點上方的 + 新增'}</div>`;
+  const empty=n?'':`<div class="empty">${DB.max.length?'沒有符合的寶可夢':'還沒有資料，點上方的 + 新增'}</div>`;
   return rows+empty;
 }
 function renderRank(root,p){
@@ -454,6 +477,7 @@ function renderRank(root,p){
   const chips=TYPES.map(t=>`<button class="chip${UI.filter===t.k?' sel':''}" style="background:${t.c}" data-act="chip" data-k="${t.k}">${typeIcon(t.k)}<span>${t.n}</span></button>`).join('');
   const body=UI.mode==='team'?teamBody():maxBody();
   root.innerHTML=head+`<div class="chips${UI.filter?' filtering':''}">${chips}</div>
+    <div class="sbar"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="#8d93a8" stroke-width="2.2"/><path d="M15.2 15.2L20 20" stroke="#8d93a8" stroke-width="2.2" stroke-linecap="round"/></svg><input id="qIn" type="search" placeholder="搜尋寶可夢名字" value="${esc(UI.q)}" autocomplete="off" autocapitalize="off" enterkeyhint="search"></div>
     <div class="list">${body}</div>`;
 }
 
@@ -570,6 +594,11 @@ $('#page').addEventListener('click',e=>{
   else if(a==='evEdit')openEvent(t.dataset.id);
   else if(a==='calPrev'||a==='calNext'){CAL.m+=a==='calNext'?1:-1;if(CAL.m<0){CAL.m=11;CAL.y--}if(CAL.m>11){CAL.m=0;CAL.y++}renderCalendar($('#page'))}
 });
+$('#page').addEventListener('input',e=>{
+  if(e.target.id!=='qIn')return;
+  UI.q=e.target.value;
+  const l=$('#page .list');if(l){l.innerHTML=UI.mode==='team'?teamBody():maxBody();l.scrollTop=0}
+});
 $('#page').addEventListener('change',e=>{
   if(e.target.id==='modeSel'){UI.mode=e.target.value;UI.filter=null;renderRank($('#page'))}
 });
@@ -675,6 +704,38 @@ function openOwn(id){
   q('#cBtn').onclick=closeSheet;
   if(p.owned)q('#noBtn').onclick=()=>{p.owned=false;save();closeSheet();renderRank($('#page'))};
   q('#okBtn').onclick=()=>{p.owned=true;p.hp=q('#oHp').value.trim();p.atk=q('#oAtk').value.trim();p.def=q('#oDef').value.trim();save();closeSheet();renderRank($('#page'))};
+}
+
+/* ================= 屬性表 ================= */
+// 攻擊時「效果絕佳」的對象
+const T_STRONG={
+ normal:[],fire:['grass','ice','bug','steel'],water:['fire','ground','rock'],electric:['water','flying'],
+ grass:['water','ground','rock'],ice:['grass','ground','flying','dragon'],fighting:['normal','ice','rock','dark','steel'],
+ poison:['grass','fairy'],ground:['fire','electric','poison','rock','steel'],flying:['grass','fighting','bug'],
+ psychic:['fighting','poison'],bug:['grass','psychic','dark'],rock:['fire','ice','flying','bug'],
+ ghost:['psychic','ghost'],dragon:['dragon'],dark:['psychic','ghost'],steel:['ice','rock','fairy'],
+ fairy:['fighting','dragon','dark']
+};
+// 防守時能抵抗（受到的傷害減少，含無效）的屬性
+const T_RESIST={
+ normal:['ghost'],fire:['fire','grass','ice','bug','steel','fairy'],water:['fire','water','ice','steel'],
+ electric:['electric','flying','steel'],grass:['water','electric','grass','ground'],ice:['ice'],
+ fighting:['bug','rock','dark'],poison:['grass','fighting','poison','bug','fairy'],ground:['poison','rock','electric'],
+ flying:['grass','fighting','bug','ground'],psychic:['fighting','psychic'],bug:['grass','fighting','ground'],
+ rock:['normal','fire','poison','flying'],ghost:['poison','bug','normal','fighting'],dragon:['fire','water','electric','grass'],
+ dark:['ghost','dark','psychic'],steel:['normal','grass','ice','flying','psychic','bug','rock','dragon','steel','fairy','poison'],
+ fairy:['fighting','bug','dark','dragon']
+};
+function renderTypes(root,p){
+  p=p||PAGES.find(x=>x.id==='types');
+  const pill=k=>`<span class="tp" style="background:${TMAP[k].c}">${TMAP[k].n}</span>`;
+  const rows=TYPES.map(t=>`<div class="trow">
+    <div class="tcell tname" style="--c:${t.c}d9">${typeIcon(t.k)}<span>${t.n}</span></div>
+    <div class="tcell tlist">${(T_STRONG[t.k]||[]).map(pill).join('')||'<span class="tnone">—</span>'}</div>
+    <div class="tcell tlist">${(T_RESIST[t.k]||[]).map(pill).join('')||'<span class="tnone">—</span>'}</div>
+  </div>`).join('');
+  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div>
+    <div class="list"><div class="trow thead"><div>屬性</div><div>克制</div><div>抵抗</div></div>${rows}</div>`;
 }
 
 /* ================= 雲朵備份 ================= */
