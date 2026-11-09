@@ -134,7 +134,8 @@ body:not([data-page="home"]) #page{display:flex}
 .half .ln .ck{width:17px;height:17px;margin:0}
 .half .plus{display:flex;align-items:center;justify-content:center;line-height:0}
 /* ---------- 日曆 ---------- */
-.evList{padding-top:24px}
+.evTop{flex:none;padding:24px 12px 0}
+.evCards{padding-top:0;min-height:110px}
 .cal{margin:0 0 14px;padding:10px 8px 6px;border-radius:18px;background:rgba(255,255,255,.72)}
 .calHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:0 4px}
 .calHead b{font-size:18px;color:#1f2340}
@@ -545,10 +546,11 @@ function renderCalendar(root,p){
       ${e.text?`<div class="evL">${esc(e.text)}</div>`:''}</div>
     </div>`).join('')||'<div class="empty">這個月沒有活動</div>';
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2><button class="addBtn" data-act="evAdd" aria-label="新增活動"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
-    <div class="list evList"><div class="cal">
+    <div class="evTop"><div class="cal">
       <div class="calHead"><button class="calBtn" data-act="calPrev" aria-label="上個月">‹</button><b>${CAL.y} 年 ${CAL.m+1} 月</b><button class="calBtn" data-act="calNext" aria-label="下個月">›</button></div>
       <div class="wkHead">${['日','一','二','三','四','五','六'].map(w=>`<div>${w}</div>`).join('')}</div>
-      ${grid}</div>${cards}</div>`;
+      ${grid}</div></div>
+    <div class="list evCards">${cards}</div>`;
 }
 function openEvent(id){
   const old=id?DB.events.find(x=>x.id===id):null;
