@@ -304,11 +304,17 @@ function ballSVG(i){
   <g clip-path="url(#bclip)"><rect width="100" height="100" fill="${b.bot}"/><path d="M0 0H100V60Q50 72 0 60Z" fill="${b.top}"/>${b.extra}</g>
   <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(0,0,0,.12)" stroke-width="1.5"/></svg>`;
 }
+// 每 6 天為一輪，6 顆各出現一次（順序每輪打亂），所以連續兩天一定不同顆
+function ballPerm(c){
+  const r=rng(c*7919+13),p=[0,1,2,3,4,5];
+  for(let i=5;i>0;i--){const j=Math.floor(r()*(i+1));[p[i],p[j]]=[p[j],p[i]]}
+  return p;
+}
 function dailyIndex(){
-  const s=todayStr();let h=2166136261;
-  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
-  h^=h>>>13;h=Math.imul(h,1274126177);h^=h>>>16;
-  return (h>>>0)%BALLS.length;
+  const d=new Date(),n=Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5);
+  const c=Math.floor(n/6),pos=n-c*6,p=ballPerm(c);
+  if(p[0]===ballPerm(c-1)[5])[p[0],p[1]]=[p[1],p[0]];
+  return p[pos];
 }
 let ballDay='';
 function applyBall(){
