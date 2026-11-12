@@ -49,10 +49,13 @@ body[data-page="home"] #home{display:block}
 }
 
 #home h1 span{display:inline-block}
-#homeEv{position:absolute;left:50%;top:86%;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;border:0;border-radius:999px;padding:12px 28px;background:var(--c,rgba(255,255,255,.7));color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3);font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:66px;max-width:94vw;text-align:center;box-shadow:0 2px 10px rgba(40,60,40,.15)}
+#homeEv{position:absolute;left:50%;top:84%;transform:translateY(-50%);pointer-events:auto;cursor:pointer;border:0;border-radius:999px;padding:8px 18px;background:var(--c,rgba(255,255,255,.7));color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3);font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-height:54px;max-width:94vw;text-align:center;box-shadow:0 2px 10px rgba(40,60,40,.15);line-height:1.3}
+#homeMon{position:absolute;left:0;top:84%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;pointer-events:none}
+#homeMon img{max-width:100%;max-height:100%;object-fit:contain;display:block;filter:drop-shadow(0 2px 3px rgba(40,60,40,.25))}
+#homeMon:not(.on){display:none}
 #homeEv.lt{color:#4a4020;text-shadow:none}
-#homeEv .evL1{font-size:15px;font-weight:800}
-#homeEv .evL{font-size:14px}
+#homeEv .evL1{font-size:14px;font-weight:800}
+#homeEv .evL{font-size:13px}
 #homeEv div{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #homeEv:empty{display:none}
 /* ---------- 寶貝球與選單 ---------- */
@@ -218,7 +221,7 @@ body:not([data-page="home"]) #page{display:flex}
 
 <div id="bg"><div id="bgHome"></div><div id="bgPage"></div><div id="veil"></div></div>
 
-<div id="home"><h1><span id="ttl">PokeLog</span></h1><button id="homeEv" type="button" aria-label="前往活動頁面"></button></div>
+<div id="home"><h1><span id="ttl"><span id="tPo">Po</span><span id="tKe">keLog</span></span></h1><div id="homeMon"><img id="homeMonImg" alt=""></div><button id="homeEv" type="button" aria-label="前往活動頁面"></button></div>
 <div id="page"></div>
 
 <button id="ballBtn" aria-label="主選單"></button>
@@ -549,16 +552,40 @@ function renderHome(){
     box.style.setProperty('--c',rgba(e.color,isExpired(e)?.5:.7));
     box.innerHTML=evLines(e);
   }
-  placeHome();
+  renderMon();placeHome();
 }
-// 活動框寬度＝PokeLog 字樣寬度，水平置中；垂直放在草地正中央（依背景圖縮放後的位置換算）
+// 每天隨機一隻（每輪 n 天各出現一次，連續兩天不會重複）
+const MONS=['mons/01.png'];   // 之後把你畫的 PNG 放進 mons 資料夾，並把檔名加在這裡
+function monIndex(n){
+  if(n<2)return 0;
+  const d=new Date(),day=Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5);
+  const perm=c=>{const r=rng(c*104729+n*31+7),a=[...Array(n).keys()];for(let i=n-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  const c=Math.floor(day/n),pos=day-c*n,a=perm(c);
+  if(a[0]===perm(c-1)[n-1])[a[0],a[1]]=[a[1],a[0]];
+  return a[pos];
+}
+// 版面：寶可夢對齊「Po」，活動框對齊「keLog」，兩者之間留一點空隙；垂直放在草地偏上的位置
 function placeHome(){
-  const t=$('#ttl'),o=$('#homeEv'),h=$('#home');
+  const t=$('#ttl'),o=$('#homeEv'),m=$('#homeMon'),h=$('#home');
   if(!t||!o||current!=='home')return;
-  const W=h.clientWidth||window.innerWidth,H=h.clientHeight||window.innerHeight;
-  const sc=Math.max(W/1000,H/2062),y=(H-2062*sc)/2+2062*sc*0.86;
-  o.style.width=Math.round(t.getBoundingClientRect().width)+'px';
-  o.style.top=Math.round(y)+'px';
+  const hr=h.getBoundingClientRect(),W=h.clientWidth||window.innerWidth,H=h.clientHeight||window.innerHeight;
+  const sc=Math.max(W/1000,H/2062),y=(H-2062*sc)/2+2062*sc*0.835;
+  const po=$('#tPo').getBoundingClientRect(),ke=$('#tKe').getBoundingClientRect(),gap=9;
+  const hasMon=m.classList.contains('on');
+  const ox=hasMon?ke.left-hr.left+gap:t.getBoundingClientRect().left-hr.left;
+  const ow=hasMon?ke.width-gap:t.getBoundingClientRect().width;
+  o.style.left=Math.round(ox)+'px';o.style.width=Math.round(ow)+'px';o.style.top=Math.round(y)+'px';o.style.transform='translateY(-50%)';
+  if(hasMon){
+    m.style.left=Math.round(po.left-hr.left)+'px';m.style.width=Math.round(po.width-gap)+'px';
+    m.style.height=o.offsetHeight+'px';m.style.top=Math.round(y)+'px';
+  }
+}
+function renderMon(){
+  const m=$('#homeMon');if(!m)return;
+  if(!MONS.length){m.classList.remove('on');return}
+  const img=$('#homeMonImg'),src=MONS[monIndex(MONS.length)];
+  m.classList.add('on');
+  if(img.getAttribute('src')!==src){img.onload=placeHome;img.src=src}
 }
 $('#homeEv').addEventListener('click',()=>go('events'));
 window.addEventListener('resize',placeHome);
