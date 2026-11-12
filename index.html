@@ -48,6 +48,13 @@ body[data-page="home"] #home{display:block}
   text-shadow:0 3px 0 rgba(255,255,255,.9),0 4px 10px rgba(58,63,158,.25);
 }
 
+#home h1 span{display:inline-block}
+#homeEv{position:absolute;left:50%;top:86%;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;border:0;border-radius:999px;padding:12px 28px;background:var(--c,rgba(255,255,255,.7));color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.3);font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:66px;max-width:94vw;text-align:center;box-shadow:0 2px 10px rgba(40,60,40,.15)}
+#homeEv.lt{color:#4a4020;text-shadow:none}
+#homeEv .evL1{font-size:15px;font-weight:800}
+#homeEv .evL{font-size:14px}
+#homeEv div{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#homeEv:empty{display:none}
 /* ---------- 寶貝球與選單 ---------- */
 #ballBtn{
   position:absolute;top:var(--top);width:52px;height:52px;padding:0;border:0;border-radius:50%;background:none;z-index:30;
@@ -211,7 +218,7 @@ body:not([data-page="home"]) #page{display:flex}
 
 <div id="bg"><div id="bgHome"></div><div id="bgPage"></div><div id="veil"></div></div>
 
-<div id="home"><h1>PokeLog</h1></div>
+<div id="home"><h1><span id="ttl">PokeLog</span></h1><button id="homeEv" type="button" aria-label="前往活動頁面"></button></div>
 <div id="page"></div>
 
 <button id="ballBtn" aria-label="主選單"></button>
@@ -358,7 +365,7 @@ function go(id){
   current=id;
   document.body.dataset.page=id;
   closeMenu();applyBall();
-  if(id==='home'){$('#page').innerHTML='';return}
+  if(id==='home'){$('#page').innerHTML='';renderHome();return}
   const p=PAGES.find(x=>x.id===id);
   if(id==='rank'){UI.filter=null;UI.q=''}
   if(id==='types'){UI.tf=[]}
@@ -514,6 +521,49 @@ function timeText(e){
   const end=(t==='00:00'&&s&&s!=='00:00')?'24:00':t;
   return s&&end?s+'-'+end:(s||end);
 }
+function evLines(e){
+  const tt=timeText(e);
+  return `<div class="evL1">${dateText(e)}${tt?' '+tt:''}</div>${e.mon?`<div class="evL">${esc(e.mon)}</div>`:''}${e.text?`<div class="evL">${esc(e.text)}</div>`:''}`;
+}
+// 活動結束時間（本地時間）。沒填結束時間就算到當天結束；結束 00:00 且開始不是 00:00 視為 24:00
+function endStamp(e){
+  const a=e.end.split('-').map(Number),t=e.eTime||'';
+  if(!t||(t==='00:00'&&e.sTime&&e.sTime!=='00:00'))return new Date(a[0],a[1]-1,a[2]+1).getTime();
+  const h=t.split(':').map(Number);
+  return new Date(a[0],a[1]-1,a[2],h[0],h[1]).getTime();
+}
+const isExpired=(e,now)=>endStamp(e)<=(now||Date.now());
+// 未過期的在前（依開始日期），過期的排到最後
+function orderEvents(arr){
+  const now=Date.now(),by=(a,b)=>a.start<b.start?-1:a.start>b.start?1:(a.end<b.end?-1:a.end>b.end?1:0);
+  return arr.filter(e=>!isExpired(e,now)).sort(by).concat(arr.filter(e=>isExpired(e,now)).sort(by));
+}
+function renderHome(){
+  const box=$('#homeEv');if(!box)return;
+  const e=orderEvents(DB.events)[0];
+  if(!e){
+    box.className='lt';box.style.setProperty('--c','rgba(255,255,255,.7)');
+    box.innerHTML='<div class="evL1">還沒有活動</div><div class="evL">點這裡新增</div>';
+  }else{
+    box.className=isLight(e.color)?'lt':'';
+    box.style.setProperty('--c',rgba(e.color,isExpired(e)?.5:.7));
+    box.innerHTML=evLines(e);
+  }
+  placeHome();
+}
+// 活動框寬度＝PokeLog 字樣寬度，水平置中；垂直放在草地正中央（依背景圖縮放後的位置換算）
+function placeHome(){
+  const t=$('#ttl'),o=$('#homeEv'),h=$('#home');
+  if(!t||!o||current!=='home')return;
+  const W=h.clientWidth||window.innerWidth,H=h.clientHeight||window.innerHeight;
+  const sc=Math.max(W/1000,H/2062),y=(H-2062*sc)/2+2062*sc*0.86;
+  o.style.width=Math.round(t.getBoundingClientRect().width)+'px';
+  o.style.top=Math.round(y)+'px';
+}
+$('#homeEv').addEventListener('click',()=>go('events'));
+window.addEventListener('resize',placeHome);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(placeHome);
+
 function renderCalendar(root,p){
   p=p||PAGES.find(x=>x.id==='events');
   const first=Date.UTC(CAL.y,CAL.m,1),dim=new Date(Date.UTC(CAL.y,CAL.m+1,0)).getUTCDate();
@@ -540,12 +590,11 @@ function renderCalendar(root,p){
     grid+=`<div class="wkRow">${cells}${bars}</div>`;
   }
   const ms0=iso(first),ms1=iso(first+(dim-1)*DAY);
-  const list=evs.filter(e=>e.start<=ms1&&e.end>=ms0);
-  const cards=list.map(e=>`<div class="evCard${isLight(e.color)?' lt':''}" style="--c:${e.color}" data-act="evEdit" data-id="${e.id}">
+  const list=orderEvents(evs.filter(e=>e.start<=ms1&&e.end>=ms0));
+  const nowT=Date.now();
+  const cards=list.map(e=>`<div class="evCard${isLight(e.color)?' lt':''}" style="--c:${isExpired(e,nowT)?rgba(e.color,.5):e.color}" data-act="evEdit" data-id="${e.id}">
       ${e.photo?`<div class="evPh"><img src="${e.photo}" alt=""></div>`:''}
-      <div class="evTx"><div class="evL1">${dateText(e)}${timeText(e)?' '+timeText(e):''}</div>
-      ${e.mon?`<div class="evL">${esc(e.mon)}</div>`:''}
-      ${e.text?`<div class="evL">${esc(e.text)}</div>`:''}</div>
+      <div class="evTx">${evLines(e)}</div>
     </div>`).join('')||'<div class="empty">這個月沒有活動</div>';
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2><button class="addBtn" data-act="evAdd" aria-label="新增活動"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
     <div class="evTop"><div class="cal">
@@ -829,8 +878,8 @@ $('#importFile').addEventListener('change',e=>{
 /* ================= 啟動 ================= */
 applyBall();
 go('home');
-initDB().then(()=>{if(current!=='home'){const p=PAGES.find(x=>x.id===current);p.render($('#page'),p)}});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ballDay!==todayStr())applyBall()});
+initDB().then(()=>{if(current!=='home'){const p=PAGES.find(x=>x.id===current);p.render($('#page'),p)}else renderHome()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(ballDay!==todayStr())applyBall();if(current==='home')renderHome()}});
 })();
 </script>
 </body>
