@@ -94,7 +94,7 @@ body:not([data-page="home"]) #page{display:flex}
 .head h2{margin:0;font-size:30px;font-weight:800;flex:1;color:#1f2340;letter-spacing:1px}
 .modeBox{position:relative}
 .modeBox::before{content:"";position:absolute;left:10px;top:50%;margin-top:-5px;border:7px solid transparent;border-top:9px solid #8d93a8;border-bottom:0;pointer-events:none}
-.modeBox select{
+.modeBox select{max-width:46vw;text-overflow:ellipsis;
   appearance:none;-webkit-appearance:none;border:0;border-radius:8px;background:rgba(214,226,245,.92);
   font-family:inherit;font-size:16px;font-weight:700;color:#1f2340;padding:9px 16px 9px 32px;
 }
@@ -187,13 +187,6 @@ body:not([data-page="home"]) #page{display:flex}
 .sheetWrap.top{align-items:flex-start}
 .sheetWrap.top .sheet{border-radius:0 0 22px 22px;padding-top:calc(env(safe-area-inset-top) + 18px)}
 .monThumb{width:38px;height:38px;object-fit:contain;flex:none}
-.modeBox.fb .fbtn{padding:9px 12px 9px 30px;max-width:46vw}
-.dd{display:none;position:absolute;top:calc(100% + 6px);right:0;min-width:140px;background:rgba(255,255,255,.97);border-radius:12px;box-shadow:0 4px 16px rgba(30,40,80,.25);overflow:hidden;z-index:41}
-.dd.on{display:block}
-.dd button{display:block;width:100%;border:0;border-bottom:1px solid #e6e9f4;background:none;padding:12px 14px;font-size:15px;font-weight:700;color:#1f2340;text-align:left}
-.dd button:last-child{border-bottom:0}
-.ddScrim{display:none;position:absolute;inset:0;z-index:40}
-.ddScrim.on{display:block}
 /* ---------- 搜尋 / 屬性表 ---------- */
 .sbar{position:relative;padding:0 12px 10px;flex:none}
 .sbar svg{position:absolute;left:25px;top:11px;width:18px;height:18px;pointer-events:none}
@@ -906,11 +899,6 @@ $('#page').addEventListener('click',e=>{
   else if(a==='edit')openEdit(t.dataset.id);
   else if(a==='own')openOwn(t.dataset.id);
   else if(a==='tfOpen')openTypeFilter();
-  else if(a==='ddToggle'){const d=$('#dd'),sc=$('#ddScrim');if(d){const on=!d.classList.contains('on');d.classList.toggle('on',on);sc.classList.toggle('on',on)}}
-  else if(a==='ddClose'){const d=$('#dd'),sc=$('#ddScrim');if(d)d.classList.remove('on');if(sc)sc.classList.remove('on')}
-  else if(a==='ddType'){$('#dd').classList.remove('on');$('#ddScrim').classList.remove('on');openTypeFilter()}
-  else if(a==='ddMon'){$('#dd').classList.remove('on');$('#ddScrim').classList.remove('on');openMonFilter()}
-  else if(a==='ddClear'){UI.tf=[];UI.tmon=null;refreshTypes()}
   else if(a==='evAdd')openEvent(null);
   else if(a==='evEdit')openEvent(t.dataset.id);
   else if(a==='calPrev'||a==='calNext'){CAL.m+=a==='calNext'?1:-1;if(CAL.m<0){CAL.m=11;CAL.y--}if(CAL.m>11){CAL.m=0;CAL.y++}renderCalendar($('#page'))}
@@ -921,6 +909,13 @@ $('#page').addEventListener('input',e=>{
   const l=$('#page .list');if(l){l.innerHTML=UI.mode==='team'?teamBody():maxBody();l.scrollTop=0}
 });
 $('#page').addEventListener('change',e=>{
+  if(e.target.id==='tfSel'){
+    const v=e.target.value;e.target.value='';
+    if(v==='type')openTypeFilter();
+    else if(v==='mon')openMonFilter();
+    else if(v==='clear'){UI.tf=[];UI.tmon=null;refreshTypes()}
+    return;
+  }
   if(e.target.id==='modeSel'){UI.mode=e.target.value;UI.filter=null;renderRank($('#page'))}
 });
 
@@ -1076,11 +1071,9 @@ function renderTypes(root,p){
     ${col(T_STRONG[t.k])}${col(T_RESIST[t.k])}${col(T_WEAK[t.k])}
   </div>`).join('');
   const thumb=UI.tmon&&UI.tmon.photo?`<img class="monThumb" src="${UI.tmon.photo}" alt="">`:'';
-  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2>${thumb}<div class="modeBox fb"><button class="fbtn${on?' on':''}" data-act="ddToggle">${esc(tfLabel())}</button>
-      <div class="dd" id="dd"><button data-act="ddType">屬性篩選</button><button data-act="ddMon">寶可夢篩選</button>${on?'<button data-act="ddClear">清除篩選</button>':''}</div></div></div>
+  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2>${thumb}<div class="modeBox"><select id="tfSel" aria-label="篩選方式"><option value="" selected disabled hidden>${esc(tfLabel())}</option><option value="type">屬性篩選</option><option value="mon">寶可夢篩選</option>${on?'<option value="clear">清除篩選</option>':''}</select></div></div>
     <div class="thwrap"><div class="trow thead"><div>屬性</div><div>克制</div><div>抵抗</div><div>被克制</div></div></div>
-    <div class="list tlistbox">${rows}</div>
-    <div class="ddScrim" id="ddScrim" data-act="ddClose"></div>`;
+    <div class="list tlistbox">${rows}</div>`;
 }
 function refreshTypes(){const l=$('#page .list'),st=l?l.scrollTop:0;renderTypes($('#page'));const l2=$('#page .list');if(l2)l2.scrollTop=st}
 function openTypeFilter(){
