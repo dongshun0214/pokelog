@@ -402,8 +402,8 @@ function applyBall(){
 /* ================= 頁面設定（之後要增加/改名改這裡） ================= */
 const PAGES=[
  {id:'rank',label:'排名',title:'排名',render:renderRank},
- {id:'events',label:'活動',title:'活動',render:renderCalendar},
- {id:'gevents',label:'活動（新）',title:'活動（新）',render:renderCalendar,go:true},
+ {id:'events',label:'關注活動',title:'關注活動',render:renderCalendar},
+ {id:'gevents',label:'所有活動',title:'所有活動',render:renderCalendar,go:true},
  {id:'boss',label:'Boss',title:'團體戰 / 極巨戰',render:renderBoss},
  {id:'types',label:'屬性表',title:'屬性表',render:renderTypes}
 ];
@@ -836,7 +836,7 @@ function renderCalendar(root,p){
   p=p||PAGES.find(x=>x.id===current&&x.render===renderCalendar)||PAGES.find(x=>x.id==='events');
   const first=Date.UTC(CAL.y,CAL.m,1),dim=new Date(Date.UTC(CAL.y,CAL.m+1,0)).getUTCDate();
   const off=new Date(first).getUTCDay(),weeks=Math.ceil((off+dim)/7),gs=first-off*DAY;
-  const evs=(p.go?DB.events.concat(GO.events):DB.events).slice().sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:(pd(b.end)-pd(b.start))-(pd(a.end)-pd(a.start)));
+  const evs=(p.go?GO.events:DB.events).slice().sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:(pd(b.end)-pd(b.start))-(pd(a.end)-pd(a.start)));
   const today=todayStr();
   let grid='';
   for(let w=0;w<weeks;w++){
@@ -937,6 +937,7 @@ $('#page').addEventListener('click',e=>{
   else if(a==='evEdit')openEvent(t.dataset.id);
   else if(a==='goOpen'){if(e.target.closest('.evPh'))go('boss');else openGoEvent(t.dataset.id)}
   else if(a==='boss')go('boss');
+  else if(a==='goDbg'){e.preventDefault();const w=openSheet('<h3>資料內容</h3><pre style="white-space:pre-wrap;word-break:break-all;font-size:12px">'+esc(GO.dbg||'尚未載入')+'</pre><div class="btns"><button class="btn" id="cancelBtn">關閉</button></div>');w.querySelector('#cancelBtn').onclick=closeSheet}
   else if(a==='bToggle')t.closest('.bCard').classList.toggle('open');
   else if(a==='calPrev'||a==='calNext'){CAL.m+=a==='calNext'?1:-1;if(CAL.m<0){CAL.m=11;CAL.y--}if(CAL.m>11){CAL.m=0;CAL.y++}renderCalendar($('#page'))}
 });
@@ -1075,7 +1076,26 @@ function openOwn(id){
 /* ================= GO 資料（ScrapedDuck / LeekDuck） ================= */
 // 資料來源：bigfoott/ScrapedDuck 的 data 分支（內容來自 LeekDuck.com）。欄位用防呆方式讀取。
 const GO_SRC=n=>['https://raw.githubusercontent.com/bigfoott/ScrapedDuck/data/'+n+'.min.json','https://raw.githubusercontent.com/bigfoott/ScrapedDuck/data/'+n+'.json','https://cdn.jsdelivr.net/gh/bigfoott/ScrapedDuck@data/'+n+'.min.json','https://cdn.jsdelivr.net/gh/bigfoott/ScrapedDuck@data/'+n+'.json'];
-const GO={events:[],raids:[],t:0,msg:'',busy:null};
+const GO={events:[],raids:[],t:0,msg:'',busy:null,dbg:''};
+const PGA=['https://pokemon-go-api.github.io/pokemon-go-api/api/raidboss.json'];
+// pokemon-go-api 的格式我沒有驗證過，所以用盡量寬鬆的方式找出「名稱含 max 的分類」
+function pgaMax(j){
+  const out=[];
+  const walk=(o,key,depth)=>{
+    if(!o||typeof o!=='object'||depth>6)return;
+    if(Array.isArray(o)){
+      if(/max/i.test(key))o.forEach(x=>{
+        if(!x||typeof x!=='object')return;
+        const nm=(x.names&&(x.names.English||x.names.en))||x.name||x.id;
+        const ty=[x.primaryType,x.secondaryType].map(t=>t&&(t.type||t.names&&t.names.English||t)).filter(Boolean).map(t=>String(t).toLowerCase().replace(/^pokemon_type_/,'')).filter(k=>TMAP[k]);
+        const im=(x.assets&&(x.assets.image||x.assets.shinyImage))||x.image||'';
+        if(nm)out.push({name:String(nm).replace(/_/g,' '),tier:String(key),max:true,shiny:false,types:ty,image:im,cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[]});
+      });
+      else o.forEach(x=>walk(x,key,depth+1));
+    }else Object.keys(o).forEach(k=>walk(o[k],k,depth+1));
+  };
+  walk(j,'',0);return out;
+}
 const GO_TTL=3600e3;
 function goColor(k){let h=0;for(const c of String(k||'x'))h=(h*31+c.charCodeAt(0))>>>0;return EV_COLORS[h%EV_COLORS.length]}
 const GO_TYPE_ZH={'community-day':'社群日','raid-hour':'團體戰時光','spotlight-hour':'焦點時光','raid-battles':'團體戰','event':'活動','season':'賽季','go-battle-league':'對戰聯盟','pokemon-go-fest':'GO Fest','max-battles':'極巨戰','research':'研究','go-rocket-takeover':'火箭隊','research-day':'研究日','max-monday':'極巨星期一','pokestop-showcase':'補給站','team-go-rocket':'火箭隊'};
@@ -1129,7 +1149,14 @@ async function goSync(force){
   GO.msg='更新活動資料中…';goRefresh();
   GO.busy=(async()=>{
     try{
-      const [ev,ra]=await Promise.all([fetchAny(GO_SRC('events'),'json'),fetchAny(GO_SRC('raids'),'json').catch(()=>null)]);
+      const [ev,ra,pg]=await Promise.all([fetchAny(GO_SRC('events'),'json'),fetchAny(GO_SRC('raids'),'json').catch(()=>null),fetchAny(PGA,'json').catch(()=>null)]);
+      GO.pgaMax=pg?pgaMax(pg):[];
+      GO.dbg=[
+        'raids 階級：'+[...new Set((ra||[]).map(r=>r&&r.tier))].join(' | '),
+        'events 類型：'+[...new Set((ev||[]).map(e=>e&&e.eventType))].join(' | '),
+        '名稱含 max 的活動：'+(ev||[]).filter(e=>/max|dynamax|gigantamax/i.test((e.name||'')+(e.eventType||''))).map(e=>e.name+' ['+e.eventType+'] extra:'+Object.keys(e.extraData||{}).join(',')).join(' ; '),
+        'pokemon-go-api：'+(pg?('頂層 '+Object.keys(pg).join(',')+'；max 筆數 '+GO.pgaMax.length):'取不到')
+      ].join('\n');
       GO.events=goNorm(ev);
       if(ra)GO.raids=goNormRaids(ra);
       GO.t=Date.now();
@@ -1270,9 +1297,10 @@ function maxTypes(name){
 function renderBoss(root,p,keep){
   p=p||PAGES.find(x=>x.id==='boss');
   const raid=GO.raids.filter(b=>!b.max),mx=GO.raids.filter(b=>b.max).concat(maxBosses());
+  if(!mx.length&&GO.pgaMax)GO.pgaMax.forEach(b=>mx.push(b));
   const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
   const body=(GO.raids.length||mx.length)?sec('團體戰 Boss',raid,0)+sec('超極巨 / 極巨 Boss',mx,raid.length):`<div class="empty">${GO.busy?'載入中…':'目前沒有 Boss 資料'}</div>`;
-  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="list">${body}<div class="syncMsg" id="goMsg">${esc(GO.msg)}</div></div>`;
+  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="list">${body}<div class="syncMsg" id="goMsg">${esc(GO.msg)}</div>${mx.length?'':'<div class="syncMsg"><a href="#" data-act="goDbg">沒有極巨 Boss？點這裡看資料內容</a></div>'}</div>`;
   if(!keep){goSync(false);pkLoad().then(()=>{if(current==='boss')goRefresh()}).catch(()=>{})}
 }
 
