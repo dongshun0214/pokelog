@@ -157,6 +157,8 @@ body:not([data-page="home"]) #page{display:flex}
 .dn.out{opacity:.35}
 .dn span{display:inline-block;min-width:24px;line-height:24px;border-radius:12px}
 .dn span.today{background:#2b2f45;color:#fff;font-weight:700}
+.dots{display:flex;flex-wrap:wrap;justify-content:center;gap:3px;padding:3px 3px 0;min-height:10px}
+.dots i{width:7px;height:7px;border-radius:50%;display:block}
 .bar{height:8px}
 .bar.s{border-top-left-radius:4px;border-bottom-left-radius:4px;margin-left:2px}
 .bar.e{border-top-right-radius:4px;border-bottom-right-radius:4px;margin-right:2px}
@@ -215,7 +217,7 @@ body:not([data-page="home"]) #page{display:flex}
 .evCard .goPh .evPh{width:46px;height:46px;background:rgba(255,255,255,.35);border-radius:10px}
 .evCard .goTag{display:inline-block;font-size:11px;font-weight:700;background:rgba(0,0,0,.22);color:#fff;border-radius:8px;padding:2px 6px;margin-bottom:3px;text-shadow:none}
 .evCard.lt .goTag{background:rgba(0,0,0,.12);color:#4a4020}
-.syncMsg{font-size:12px;color:#3a3f5c;padding:0 14px 4px;min-height:16px}
+.syncMsg{font-size:12px;color:#3a3f5c;padding:6px 6px 0;text-align:center}
 .bCard{background:var(--c);color:#fff;border-radius:14px;margin-bottom:8px;text-shadow:0 1px 2px rgba(0,0,0,.3);overflow:hidden}
 .bTop{display:flex;align-items:center;gap:10px;padding:10px 12px}
 .bPh{width:64px;height:64px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.3);border-radius:12px}
@@ -842,10 +844,11 @@ function renderCalendar(root,p){
     let cells='';
     for(let i=0;i<7;i++){
       const ms=ws+i*DAY,s=iso(ms),inM=new Date(ms).getUTCMonth()===CAL.m;
-      cells+=`<div class="dn${inM?'':' out'}" style="grid-column:${i+1}"><span class="${s===today?'today':''}">${new Date(ms).getUTCDate()}</span></div>`;
+      const dots=p.go?`<div class="dots">${evs.filter(e=>e.start<=s&&e.end>=s).map(e=>`<i style="background:${e.color}"></i>`).join('')}</div>`:'';
+      cells+=`<div class="dn${inM?'':' out'}" style="grid-column:${i+1}"><span class="${s===today?'today':''}">${new Date(ms).getUTCDate()}</span>${dots}</div>`;
     }
     const lanes=[];let bars='';
-    evs.filter(e=>e.start<=weS&&e.end>=wsS).forEach(e=>{
+    (p.go?[]:evs.filter(e=>e.start<=weS&&e.end>=wsS)).forEach(e=>{
       const sc=Math.max(0,Math.round((pd(e.start)-ws)/DAY)),ec=Math.min(6,Math.round((pd(e.end)-ws)/DAY));
       let l=lanes.findIndex(last=>last<sc);
       if(l<0){l=lanes.length;lanes.push(-1)}
@@ -867,7 +870,7 @@ function renderCalendar(root,p){
       <div class="calHead"><button class="calBtn" data-act="calPrev" aria-label="上個月">‹</button><b>${CAL.y} 年 ${CAL.m+1} 月</b><button class="calBtn" data-act="calNext" aria-label="下個月">›</button></div>
       <div class="wkHead">${['日','一','二','三','四','五','六'].map(w=>`<div>${w}</div>`).join('')}</div>
       ${grid}</div></div>
-    ${p.go?'<div class="syncMsg" id="goMsg">'+esc(GO.msg)+'</div>':''}<div class="list evCards">${cards}</div>`;
+    <div class="list evCards">${cards}${p.go?'<div class="syncMsg" id="goMsg">'+esc(GO.msg)+'</div>':''}</div>`;
   if(p.go)goSync(false);
 }
 function openEvent(id){
@@ -1084,12 +1087,15 @@ function goNorm(raw){
     const hasT=st.length>10;
     const sd=st.slice(0,10),ed=en.slice(0,10);
     if(!/^\d{4}-\d\d-\d\d$/.test(sd)||!/^\d{4}-\d\d-\d\d$/.test(ed))return;
+    if(/season|battle-league|go-pass|battle league|go pass/i.test((x.eventType||'')+' '+(x.name||'')))return;
     const ex=x.extraData||{};
     const mons=[];
     const add=(n,img)=>{if(img||n)mons.push({name:n||'',image:img||''})};
     ((ex.communityday&&ex.communityday.spawns)||[]).forEach(m=>add(m.name,m.image));
     ((ex.raidbattles&&ex.raidbattles.bosses)||[]).forEach(m=>add(m.name,m.image));
     if(ex.spotlight&&ex.spotlight.name)add(ex.spotlight.name,ex.spotlight.image);
+    Object.keys(ex).forEach(k=>{const o=ex[k];if(!o||typeof o!=='object'||k==='communityday'||k==='raidbattles')return;['spawns','bosses','pokemon'].forEach(f=>(Array.isArray(o[f])?o[f]:[]).forEach(m=>m&&add(m.name,m.image)))});
+    const seen={};for(let i=mons.length-1;i>=0;i--){const k=mons[i].name+'|'+mons[i].image;if(seen[k])mons.splice(i,1);else seen[k]=1}
     const fin=(ex.raidbattles&&ex.raidbattles.bosses)||(ex.maxbattles&&ex.maxbattles.bosses);
     out.push({go:true,id:'go:'+(x.eventID||x.name+st),start:sd,end:ed<sd?sd:ed,sTime:hasT?st.slice(11,16):'',eTime:en.length>10?en.slice(11,16):'',
       text:x.name||'',mon:'',photo:'',color:goColor(x.eventType),type:x.eventType||'',heading:x.heading||'',link:x.link||'',image:x.image||'',
@@ -1171,7 +1177,9 @@ function bossZh(name){
   }
   let suf='';
   const m=n.match(/^(.*?)\s+([XY])$/i);if(m){n=m[1];suf=' '+m[2].toUpperCase()}
-  const hit=PK.list.find(e=>e.en&&e.en.toLowerCase()===n.toLowerCase());
+  n=n.replace(/\s*\(.*\)\s*$/,'');
+  const nk=x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,'');
+  const hit=PK.list.find(e=>e.en&&nk(e.en)===nk(n));
   return hit&&hit.zh?pre+hit.zh+suf:name;
 }
 // 依防守屬性算每個攻擊屬性的倍率（GO：效果絕佳 1.6，雙弱 2.56；抵抗 0.625、雙抵抗 0.391）
@@ -1188,6 +1196,18 @@ function effectiveness(types){
   return res;
 }
 // 建議人數：LeekDuck 沒有提供，這裡只依階級做粗略估計
+function tierZh(b){
+  const t=b.tier.toLowerCase(),n=b.name.toLowerCase();
+  if(b.max)return /gigantamax|gmax/.test(t+' '+n)?'超極巨戰':'極巨戰';
+  const num={'1':'一','3':'三','4':'四','5':'五','6':'六'};
+  const m=t.match(/[1-6]/);
+  let z='';
+  if(/shadow/.test(t))z='暗影';
+  if(/mega/.test(t))return z+'Mega 團體戰';
+  if(m)return z+num[m[0]]+'星團體戰';
+  if(/legendary|ultra/.test(t))return z+'五星團體戰';
+  return z+(b.tier||'團體戰');
+}
 function playersGuess(b){
   const t=b.tier.toLowerCase();
   if(b.max)return /gigantamax|gmax|超極巨/.test(t+b.name.toLowerCase())?'約 4 人以上':'約 3 人以上';
@@ -1209,28 +1229,50 @@ function bossCard(b,i){
     <div class="bTop" data-act="bToggle">
       <div class="bPh">${b.image?`<img src="${esc(b.image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">`:''}</div>
       <div class="bTx"><div class="bNm">${esc(bossZh(b.name))}</div><div class="bTps">${tpills(b.types)}</div>
-        <div class="bSm">${esc(b.tier||'')}${b.cpMax?'　100% CP '+b.cpMax:''}${b.shiny?'　✨':''}</div></div>
+        <div class="bSm">${tierZh(b)}${b.cpMax?'　100% CP '+b.cpMax:''}${b.shiny?'　✨':''}</div></div>
       <div class="bArr">▼</div>
     </div>
     <div class="bDet">
-      <div class="r"><b>階級</b><div>${esc(b.tier||'—')}</div></div>
-      <div class="r"><b>100% CP</b><div>${b.cpMax?b.cpMax+'（20 級捕捉，個體值 15/15/15）':'—'}</div></div>
-      <div class="r"><b>CP 範圍</b><div>${rng(b.cpMin,b.cpMax)}</div></div>
+      ${b.cpMax?`<div class="r"><b>CP 範圍</b><div>${rng(b.cpMin,b.cpMax)}</div></div>`:''}
       ${b.bMax?`<div class="r"><b>天氣加成</b><div>${rng(b.bMin,b.bMax)}${wx?'（'+esc(wx)+'）':''}</div></div>`:(wx?`<div class="r"><b>加成天氣</b><div>${esc(wx)}</div></div>`:'')}
-      <div class="r"><b>屬性</b><div>${tpills(b.types)||'—'}</div></div>
       <div class="r"><b>用什麼打</b><div>${best.length?best.map(x=>`<span class="tp" style="background:${TMAP[x[0]].c}">${TMAP[x[0]].n}${x[1]>2?' ×2':''}</span>`).join(''):'—'}</div></div>
-      <div class="r"><b>建議人數</b><div>${playersGuess(b)}（粗估）</div></div>
-      <div class="r"><b>異色</b><div>${b.shiny?'可能出現':'不會出現／未知'}</div></div>
-      <div style="font-size:11px;margin-top:8px;opacity:.85">「用什麼打」依屬性相剋計算；建議人數為依階級的粗估，不是官方數字。</div>
     </div>
   </div>`;
 }
+// 極巨 Boss：ScrapedDuck 的 raids.json 沒有，改從目前進行中的極巨戰活動取名單，屬性用 PokeAPI 查
+function maxBosses(){
+  const today=todayStr(),out=[],seen={};
+  GO.events.forEach(e=>{
+    if(e.start>today||isExpired(e))return;
+    const txt=e.type+' '+e.text;
+    if(!/max|dynamax|gigantamax/i.test(txt))return;
+    const gm=/gigantamax/i.test(txt);
+    e.mons.forEach(m=>{
+      if(!m.name||seen[m.name])return;seen[m.name]=1;
+      const nm=gm&&!/gigantamax|dynamax/i.test(m.name)?'Gigantamax '+m.name:m.name;
+      out.push({name:nm,tier:gm?'Gigantamax Battle':'Dynamax Battle',max:true,shiny:false,types:maxTypes(m.name),image:m.image,cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[]});
+    });
+  });
+  return out;
+}
+const MAXT={};
+function maxTypes(name){
+  if(MAXT[name])return MAXT[name];
+  if(!PK.list)return [];
+  const nk=x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,'');
+  let n=String(name).replace(/^(gigantamax|dynamax)\s+/i,'').replace(/\s*\(.*\)\s*$/,'');
+  const hit=PK.list.find(e=>e.en&&nk(e.en)===nk(n));
+  if(!hit)return [];
+  if(!MAXT.p)MAXT.p={};
+  if(!MAXT.p[hit.id]){MAXT.p[hit.id]=1;pkInfo(hit.id).then(i=>{MAXT[name]=i.types;if(current==='boss')goRefresh()}).catch(()=>{})}
+  return [];
+}
 function renderBoss(root,p,keep){
   p=p||PAGES.find(x=>x.id==='boss');
-  const raid=GO.raids.filter(b=>!b.max),mx=GO.raids.filter(b=>b.max);
+  const raid=GO.raids.filter(b=>!b.max),mx=GO.raids.filter(b=>b.max).concat(maxBosses());
   const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
-  const body=GO.raids.length?sec('團體戰 Boss',raid,0)+sec('超極巨 / 極巨 Boss',mx,raid.length):`<div class="empty">${GO.busy?'載入中…':'目前沒有 Boss 資料'}</div>`;
-  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="syncMsg" id="goMsg">${esc(GO.msg)}</div><div class="list">${body}</div>`;
+  const body=(GO.raids.length||mx.length)?sec('團體戰 Boss',raid,0)+sec('超極巨 / 極巨 Boss',mx,raid.length):`<div class="empty">${GO.busy?'載入中…':'目前沒有 Boss 資料'}</div>`;
+  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="list">${body}<div class="syncMsg" id="goMsg">${esc(GO.msg)}</div></div>`;
   if(!keep){goSync(false);pkLoad().then(()=>{if(current==='boss')goRefresh()}).catch(()=>{})}
 }
 
