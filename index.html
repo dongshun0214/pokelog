@@ -1145,7 +1145,7 @@ async function goSync(force){
   if(!GO.t&&IDB.db){
     try{const c=await IDB.get('goData');if(c&&c.v===1){GO.events=c.events||[];GO.raids=c.raids||[];GO.t=c.t||0;GO.msg='已載入上次的資料';goRefresh()}}catch(e){}
   }
-  if(!force&&GO.t&&Date.now()-GO.t<GO_TTL)return;
+  if(!force&&GO.t&&GO.dbg&&Date.now()-GO.t<GO_TTL)return;
   GO.msg='更新活動資料中…';goRefresh();
   GO.busy=(async()=>{
     try{
