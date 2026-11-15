@@ -208,6 +208,31 @@ body:not([data-page="home"]) #page{display:flex}
 .fbtn.on{background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.5) inset}
 .tp{color:#fff;font-size:10px;font-weight:700;line-height:1;padding:4px 5px;border-radius:9px;text-shadow:0 1px 1px rgba(0,0,0,.3);white-space:nowrap}
 .tnone{color:#8d93a8;padding:0 4px}
+
+/* ---------- GO 活動 / Boss ---------- */
+.evCard.go{align-items:flex-start;flex-wrap:wrap}
+.evCard .goPh{display:flex;gap:4px;flex:none;max-width:104px;flex-wrap:wrap}
+.evCard .goPh .evPh{width:46px;height:46px;background:rgba(255,255,255,.35);border-radius:10px}
+.evCard .goTag{display:inline-block;font-size:11px;font-weight:700;background:rgba(0,0,0,.22);color:#fff;border-radius:8px;padding:2px 6px;margin-bottom:3px;text-shadow:none}
+.evCard.lt .goTag{background:rgba(0,0,0,.12);color:#4a4020}
+.syncMsg{font-size:12px;color:#3a3f5c;padding:0 14px 4px;min-height:16px}
+.bCard{background:var(--c);color:#fff;border-radius:14px;margin-bottom:8px;text-shadow:0 1px 2px rgba(0,0,0,.3);overflow:hidden}
+.bTop{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.bPh{width:64px;height:64px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.3);border-radius:12px}
+.bPh img{max-width:100%;max-height:100%;object-fit:contain}
+.bTx{min-width:0;flex:1}
+.bNm{font-size:16px;font-weight:800;word-break:break-word}
+.bTps{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 3px}
+.bSm{font-size:13px}
+.bArr{flex:none;font-size:14px;transition:transform .2s}
+.bCard.open .bArr{transform:rotate(180deg)}
+.bDet{display:none;padding:2px 12px 12px;font-size:14px}
+.bCard.open .bDet{display:block}
+.bDet .r{display:flex;gap:8px;margin-top:7px;align-items:center;min-height:22px}
+.bDet .r div{line-height:1.3}
+.bDet .r b{flex:none;width:76px}
+.bDet .r div{flex:1;display:flex;gap:4px;flex-wrap:wrap}
+.bHd{font-size:14px;font-weight:800;color:#3a3f5c;padding:6px 4px 6px}
 /* ---------- 底部表單 ---------- */
 .sheetWrap{position:fixed;inset:0;z-index:50;background:rgba(20,25,50,.38);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:520px;max-height:90%;overflow-y:auto;background:#fff;border-radius:22px 22px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom) + 18px)}
@@ -376,6 +401,8 @@ function applyBall(){
 const PAGES=[
  {id:'rank',label:'排名',title:'排名',render:renderRank},
  {id:'events',label:'活動',title:'活動',render:renderCalendar},
+ {id:'gevents',label:'活動（新）',title:'活動（新）',render:renderCalendar,go:true},
+ {id:'boss',label:'Boss',title:'團體戰 / 極巨戰',render:renderBoss},
  {id:'types',label:'屬性表',title:'屬性表',render:renderTypes}
 ];
 let current='home';
@@ -804,10 +831,10 @@ window.addEventListener('resize',placeHome);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(placeHome);
 
 function renderCalendar(root,p){
-  p=p||PAGES.find(x=>x.id==='events');
+  p=p||PAGES.find(x=>x.id===current&&x.render===renderCalendar)||PAGES.find(x=>x.id==='events');
   const first=Date.UTC(CAL.y,CAL.m,1),dim=new Date(Date.UTC(CAL.y,CAL.m+1,0)).getUTCDate();
   const off=new Date(first).getUTCDay(),weeks=Math.ceil((off+dim)/7),gs=first-off*DAY;
-  const evs=DB.events.slice().sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:(pd(b.end)-pd(b.start))-(pd(a.end)-pd(a.start)));
+  const evs=(p.go?DB.events.concat(GO.events):DB.events).slice().sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:(pd(b.end)-pd(b.start))-(pd(a.end)-pd(a.start)));
   const today=todayStr();
   let grid='';
   for(let w=0;w<weeks;w++){
@@ -831,8 +858,8 @@ function renderCalendar(root,p){
   const ms0=iso(first),ms1=iso(first+(dim-1)*DAY);
   const list=orderEvents(evs.filter(e=>e.start<=ms1&&e.end>=ms0));
   const nowT=Date.now();
-  const cards=list.map(e=>`<div class="evCard${isLight(e.color)?' lt':''}" style="--c:${isExpired(e,nowT)?rgba(e.color,.5):e.color}" data-act="evEdit" data-id="${e.id}">
-      ${e.photo?`<div class="evPh"><img src="${e.photo}" alt=""></div>`:''}
+  const cards=list.map(e=>e.go?goCard(e,nowT):`<div class="evCard${isLight(e.color)?' lt':''}" style="--c:${isExpired(e,nowT)?rgba(e.color,.5):e.color}" data-act="evEdit" data-id="${e.id}">
+      ${e.photo?`<div class="evPh"${p.go?' data-act="boss"':''}><img src="${e.photo}" alt=""></div>`:''}
       <div class="evTx">${evLines(e)}</div>
     </div>`).join('')||'<div class="empty">這個月沒有活動</div>';
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2><button class="addBtn" data-act="evAdd" aria-label="新增活動"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
@@ -840,7 +867,8 @@ function renderCalendar(root,p){
       <div class="calHead"><button class="calBtn" data-act="calPrev" aria-label="上個月">‹</button><b>${CAL.y} 年 ${CAL.m+1} 月</b><button class="calBtn" data-act="calNext" aria-label="下個月">›</button></div>
       <div class="wkHead">${['日','一','二','三','四','五','六'].map(w=>`<div>${w}</div>`).join('')}</div>
       ${grid}</div></div>
-    <div class="list evCards">${cards}</div>`;
+    ${p.go?'<div class="syncMsg" id="goMsg">'+esc(GO.msg)+'</div>':''}<div class="list evCards">${cards}</div>`;
+  if(p.go)goSync(false);
 }
 function openEvent(id){
   const old=id?DB.events.find(x=>x.id===id):null;
@@ -904,6 +932,9 @@ $('#page').addEventListener('click',e=>{
   else if(a==='tfOpen')openTypeFilter();
   else if(a==='evAdd')openEvent(null);
   else if(a==='evEdit')openEvent(t.dataset.id);
+  else if(a==='goOpen'){if(e.target.closest('.evPh'))go('boss');else openGoEvent(t.dataset.id)}
+  else if(a==='boss')go('boss');
+  else if(a==='bToggle')t.closest('.bCard').classList.toggle('open');
   else if(a==='calPrev'||a==='calNext'){CAL.m+=a==='calNext'?1:-1;if(CAL.m<0){CAL.m=11;CAL.y--}if(CAL.m>11){CAL.m=0;CAL.y++}renderCalendar($('#page'))}
 });
 $('#page').addEventListener('input',e=>{
@@ -1035,6 +1066,172 @@ function openOwn(id){
   q('#cBtn').onclick=closeSheet;
   if(p.owned)q('#noBtn').onclick=()=>{p.owned=false;save();closeSheet();renderRank($('#page'))};
   q('#okBtn').onclick=()=>{p.owned=true;p.hp=q('#oHp').value.trim();p.atk=q('#oAtk').value.trim();p.def=q('#oDef').value.trim();save();closeSheet();renderRank($('#page'))};
+}
+
+
+/* ================= GO 資料（ScrapedDuck / LeekDuck） ================= */
+// 資料來源：bigfoott/ScrapedDuck 的 data 分支（內容來自 LeekDuck.com）。欄位用防呆方式讀取。
+const GO_SRC=n=>['https://raw.githubusercontent.com/bigfoott/ScrapedDuck/data/'+n+'.min.json','https://raw.githubusercontent.com/bigfoott/ScrapedDuck/data/'+n+'.json','https://cdn.jsdelivr.net/gh/bigfoott/ScrapedDuck@data/'+n+'.min.json','https://cdn.jsdelivr.net/gh/bigfoott/ScrapedDuck@data/'+n+'.json'];
+const GO={events:[],raids:[],t:0,msg:'',busy:null};
+const GO_TTL=3600e3;
+function goColor(k){let h=0;for(const c of String(k||'x'))h=(h*31+c.charCodeAt(0))>>>0;return EV_COLORS[h%EV_COLORS.length]}
+const GO_TYPE_ZH={'community-day':'社群日','raid-hour':'團體戰時光','spotlight-hour':'焦點時光','raid-battles':'團體戰','event':'活動','season':'賽季','go-battle-league':'對戰聯盟','pokemon-go-fest':'GO Fest','max-battles':'極巨戰','research':'研究','go-rocket-takeover':'火箭隊','research-day':'研究日','max-monday':'極巨星期一','pokestop-showcase':'補給站','team-go-rocket':'火箭隊'};
+function goNorm(raw){
+  const out=[];
+  (Array.isArray(raw)?raw:[]).forEach(x=>{
+    if(!x||!x.start)return;
+    const st=String(x.start),en=String(x.end||x.start);
+    const hasT=st.length>10;
+    const sd=st.slice(0,10),ed=en.slice(0,10);
+    if(!/^\d{4}-\d\d-\d\d$/.test(sd)||!/^\d{4}-\d\d-\d\d$/.test(ed))return;
+    const ex=x.extraData||{};
+    const mons=[];
+    const add=(n,img)=>{if(img||n)mons.push({name:n||'',image:img||''})};
+    ((ex.communityday&&ex.communityday.spawns)||[]).forEach(m=>add(m.name,m.image));
+    ((ex.raidbattles&&ex.raidbattles.bosses)||[]).forEach(m=>add(m.name,m.image));
+    if(ex.spotlight&&ex.spotlight.name)add(ex.spotlight.name,ex.spotlight.image);
+    const fin=(ex.raidbattles&&ex.raidbattles.bosses)||(ex.maxbattles&&ex.maxbattles.bosses);
+    out.push({go:true,id:'go:'+(x.eventID||x.name+st),start:sd,end:ed<sd?sd:ed,sTime:hasT?st.slice(11,16):'',eTime:en.length>10?en.slice(11,16):'',
+      text:x.name||'',mon:'',photo:'',color:goColor(x.eventType),type:x.eventType||'',heading:x.heading||'',link:x.link||'',image:x.image||'',
+      mons:mons.slice(0,6),hasBoss:!!fin});
+  });
+  return out;
+}
+function goTierInfo(r){
+  const t=String(r.tier||'');
+  const max=/max|dynamax|gigantamax|極巨/i.test(t)||/^(gigantamax|dynamax)/i.test(r.name||'');
+  return {max,tier:t};
+}
+function goNormRaids(raw){
+  return (Array.isArray(raw)?raw:[]).filter(r=>r&&r.name).map(r=>{
+    const ti=goTierInfo(r),cp=r.combatPower||{};
+    const num=v=>{const n=+v;return isFinite(n)&&n>0?n:null};
+    return {name:r.name,tier:ti.tier,max:ti.max,shiny:!!r.canBeShiny,
+      types:(r.types||[]).map(t=>String(t&&t.name||t).toLowerCase()).filter(k=>TMAP[k]),
+      image:r.image||'',
+      cpMin:num(cp.normal&&cp.normal.min),cpMax:num(cp.normal&&cp.normal.max),
+      bMin:num(cp.boosted&&cp.boosted.min),bMax:num(cp.boosted&&cp.boosted.max),
+      weather:(r.boostedWeather||[]).map(w=>String(w&&w.name||w))};
+  });
+}
+async function goSync(force){
+  if(GO.busy)return GO.busy;
+  if(!GO.t&&IDB.db){
+    try{const c=await IDB.get('goData');if(c&&c.v===1){GO.events=c.events||[];GO.raids=c.raids||[];GO.t=c.t||0;GO.msg='已載入上次的資料';goRefresh()}}catch(e){}
+  }
+  if(!force&&GO.t&&Date.now()-GO.t<GO_TTL)return;
+  GO.msg='更新活動資料中…';goRefresh();
+  GO.busy=(async()=>{
+    try{
+      const [ev,ra]=await Promise.all([fetchAny(GO_SRC('events'),'json'),fetchAny(GO_SRC('raids'),'json').catch(()=>null)]);
+      GO.events=goNorm(ev);
+      if(ra)GO.raids=goNormRaids(ra);
+      GO.t=Date.now();
+      GO.msg='資料來源：LeekDuck / ScrapedDuck　更新於 '+new Date(GO.t).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      if(IDB.db){try{await IDB.put({v:1,t:GO.t,events:GO.events,raids:GO.raids},'goData')}catch(e){}}
+    }catch(e){GO.msg=GO.t?'無法更新，顯示上次的資料':'無法取得活動資料（網路或資料來源問題）'}
+    GO.busy=null;goRefresh();
+  })();
+  return GO.busy;
+}
+function goRefresh(){
+  const p=PAGES.find(x=>x.id===current);
+  if(!p)return;
+  if(p.id==='boss'){const l=$('#page .list');const st=l?l.scrollTop:0;renderBoss($('#page'),p,true);const l2=$('#page .list');if(l2)l2.scrollTop=st}
+  else if(p.go){const m=$('#goMsg');if(m)m.textContent=GO.msg;if(GO._n!==GO.events.length+':'+GO.t){GO._n=GO.events.length+':'+GO.t;const l=$('#page .list');const st=l?l.scrollTop:0;renderCalendar($('#page'),p);const l2=$('#page .list');if(l2)l2.scrollTop=st}}
+}
+function goCard(e,nowT){
+  const ex=isExpired(e,nowT),c=ex?rgba(e.color,.5):e.color;
+  const ph=e.mons.filter(m=>m.image).map(m=>`<div class="evPh"><img src="${esc(m.image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`).join('');
+  const tag=GO_TYPE_ZH[e.type]||e.heading||'';
+  return `<div class="evCard go${isLight(e.color)?' lt':''}" style="--c:${c}" data-act="goOpen" data-id="${esc(e.id)}">
+    ${ph?`<div class="goPh">${ph}</div>`:''}
+    <div class="evTx">${tag?`<span class="goTag">${esc(tag)}</span>`:''}<div class="evL1">${dateText(e)}${timeText(e)?' '+timeText(e):''}</div><div class="evL">${esc(e.text)}</div></div>
+  </div>`;
+}
+function openGoEvent(id){
+  const e=GO.events.find(x=>x.id===id);if(!e)return;
+  const mons=e.mons.map(m=>`<div style="text-align:center;width:72px"><div class="evPh" style="margin:0 auto;width:60px;height:60px"><img src="${esc(m.image)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'"></div><div style="font-size:12px;color:#3a3f5c">${esc(m.name)}</div></div>`).join('');
+  const s=openSheet(`<h3>${esc(e.text)}</h3>
+    <div style="color:#3a3f5c;margin-bottom:10px">${dateText(e)}${timeText(e)?' '+timeText(e):''}${e.type?'　'+esc(GO_TYPE_ZH[e.type]||e.type):''}</div>
+    ${mons?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${mons}</div>`:''}
+    <div class="btns">${e.link?`<a class="btn" href="${esc(e.link)}" target="_blank" rel="noopener" style="text-decoration:none;text-align:center">LeekDuck 詳情</a>`:''}<button class="btn" id="cancelBtn">關閉</button></div>`);
+  s.querySelector('#cancelBtn').onclick=closeSheet;
+}
+
+/* ================= Boss 頁 ================= */
+const WX_ZH={'sunny':'晴天','clear':'晴天','rainy':'下雨','rain':'下雨','partly cloudy':'多雲','cloudy':'陰天','windy':'大風','snow':'下雪','fog':'起霧','foggy':'起霧'};
+const NAME_PFX=[['shadow ','暗影 '],['mega ','Mega '],['primal ','原始 '],['alolan ','阿羅拉 '],['galarian ','伽勒爾 '],['hisuian ','洗翠 '],['paldean ','帕底亞 '],['gigantamax ','超極巨 '],['dynamax ','極巨 ']];
+function bossZh(name){
+  if(!PK.list)return name;
+  let n=String(name),pre='',low=n.toLowerCase();
+  for(let i=0;i<4;i++){
+    const f=NAME_PFX.find(p=>low.startsWith(p[0]));if(!f)break;
+    pre+=f[1];n=n.slice(f[0].length);low=low.slice(f[0].length);
+  }
+  let suf='';
+  const m=n.match(/^(.*?)\s+([XY])$/i);if(m){n=m[1];suf=' '+m[2].toUpperCase()}
+  const hit=PK.list.find(e=>e.en&&e.en.toLowerCase()===n.toLowerCase());
+  return hit&&hit.zh?pre+hit.zh+suf:name;
+}
+// 依防守屬性算每個攻擊屬性的倍率（GO：效果絕佳 1.6，雙弱 2.56；抵抗 0.625、雙抵抗 0.391）
+function effectiveness(types){
+  const res=[];
+  TYPES.forEach(a=>{
+    let m=1;
+    types.forEach(d=>{
+      if((T_STRONG[a.k]||[]).includes(d))m*=1.6;
+      else if((T_RESIST[d]||[]).includes(a.k))m*=0.625;
+    });
+    res.push([a.k,m]);
+  });
+  return res;
+}
+// 建議人數：LeekDuck 沒有提供，這裡只依階級做粗略估計
+function playersGuess(b){
+  const t=b.tier.toLowerCase();
+  if(b.max)return /gigantamax|gmax|超極巨/.test(t+b.name.toLowerCase())?'約 4 人以上':'約 3 人以上';
+  if(/mega/.test(t))return '約 4–6 人';
+  if(/shadow/.test(t)&&/5/.test(t))return '約 3–5 人';
+  if(/5|legendary|ultra/.test(t))return '約 3–5 人';
+  if(/3/.test(t))return '約 1–3 人';
+  if(/1/.test(t))return '1 人即可';
+  return '依實力而定';
+}
+const tpills=ks=>ks.map(k=>`<span class="tp" style="background:${TMAP[k].c}">${TMAP[k].n}</span>`).join('');
+function bossCard(b,i){
+  const col=b.types.length?TMAP[b.types[0]].c:'#6b7390';
+  const eff=effectiveness(b.types);
+  const best=eff.filter(x=>x[1]>1.01).sort((a,c)=>c[1]-a[1]);
+  const wx=b.weather.map(w=>WX_ZH[w.toLowerCase()]||w).join('、');
+  const rng=(a,c)=>a&&c?(a===c?a:a+' – '+c):(c||a||'—');
+  return `<div class="bCard" style="--c:${col}" data-i="${i}">
+    <div class="bTop" data-act="bToggle">
+      <div class="bPh">${b.image?`<img src="${esc(b.image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">`:''}</div>
+      <div class="bTx"><div class="bNm">${esc(bossZh(b.name))}</div><div class="bTps">${tpills(b.types)}</div>
+        <div class="bSm">${esc(b.tier||'')}${b.cpMax?'　100% CP '+b.cpMax:''}${b.shiny?'　✨':''}</div></div>
+      <div class="bArr">▼</div>
+    </div>
+    <div class="bDet">
+      <div class="r"><b>階級</b><div>${esc(b.tier||'—')}</div></div>
+      <div class="r"><b>100% CP</b><div>${b.cpMax?b.cpMax+'（20 級捕捉，個體值 15/15/15）':'—'}</div></div>
+      <div class="r"><b>CP 範圍</b><div>${rng(b.cpMin,b.cpMax)}</div></div>
+      ${b.bMax?`<div class="r"><b>天氣加成</b><div>${rng(b.bMin,b.bMax)}${wx?'（'+esc(wx)+'）':''}</div></div>`:(wx?`<div class="r"><b>加成天氣</b><div>${esc(wx)}</div></div>`:'')}
+      <div class="r"><b>屬性</b><div>${tpills(b.types)||'—'}</div></div>
+      <div class="r"><b>用什麼打</b><div>${best.length?best.map(x=>`<span class="tp" style="background:${TMAP[x[0]].c}">${TMAP[x[0]].n}${x[1]>2?' ×2':''}</span>`).join(''):'—'}</div></div>
+      <div class="r"><b>建議人數</b><div>${playersGuess(b)}（粗估）</div></div>
+      <div class="r"><b>異色</b><div>${b.shiny?'可能出現':'不會出現／未知'}</div></div>
+      <div style="font-size:11px;margin-top:8px;opacity:.85">「用什麼打」依屬性相剋計算；建議人數為依階級的粗估，不是官方數字。</div>
+    </div>
+  </div>`;
+}
+function renderBoss(root,p,keep){
+  p=p||PAGES.find(x=>x.id==='boss');
+  const raid=GO.raids.filter(b=>!b.max),mx=GO.raids.filter(b=>b.max);
+  const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
+  const body=GO.raids.length?sec('團體戰 Boss',raid,0)+sec('超極巨 / 極巨 Boss',mx,raid.length):`<div class="empty">${GO.busy?'載入中…':'目前沒有 Boss 資料'}</div>`;
+  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="syncMsg" id="goMsg">${esc(GO.msg)}</div><div class="list">${body}</div>`;
+  if(!keep){goSync(false);pkLoad().then(()=>{if(current==='boss')goRefresh()}).catch(()=>{})}
 }
 
 /* ================= 屬性表 ================= */
