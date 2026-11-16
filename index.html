@@ -1267,7 +1267,7 @@ function bossCard(b,i){
     <div class="bTop" data-act="bToggle">
       <div class="bPh">${b.image?`<img src="${esc(b.image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">`:''}</div>
       <div class="bTx"><div class="bNm">${esc(b.zh||bossZh(b.name))}</div><div class="bTps">${tpills(b.types)}</div>
-        <div class="bSm">${tierZh(b)}${b.cpMax?'　100% CP '+b.cpMax:''}${b.shiny?'　✨':''}</div></div>
+        <div class="bSm">${tierZh(b)}${b.when?'　'+b.when+' 開始':''}${b.cpMax?'　100% CP '+b.cpMax:''}${b.shiny?'　✨':''}</div></div>
       <div class="bArr">▼</div>
     </div>
     <div class="bDet">
@@ -1290,11 +1290,12 @@ function fillMax(b){
   if(!info)return b;
   return Object.assign({},b,{types:b.types.length?b.types:info.types,image:b.image||info.photo});
 }
-function maxBosses(){
+function maxBosses(soon){
   if(!PK.list)return [];
   const today=todayStr(),out=[],seen={};
   GO.events.forEach(e=>{
-    if(e.start>today||isExpired(e))return;
+    if(soon?e.start<=today:e.start>today)return;
+    if(isExpired(e))return;
     const m=String(e.text).match(/\b(Gigantamax|Dynamax|Eternamax)\s+(.+?)(?=\s+(?:during|returns?|max|power|raids?|battles?|event|weekend|day|in)\b|[:,!(]|$)/i);
     if(!m)return;
     const kind=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase(),base=m[2].trim();
@@ -1302,7 +1303,7 @@ function maxBosses(){
     if(!hit||seen[hit.id+kind])return;seen[hit.id+kind]=1;
     const info=MAXT[hit.id];
     if(!info&&!MAXT['p'+hit.id]){MAXT['p'+hit.id]=1;pkInfo(hit.id).then(i=>{MAXT[hit.id]=i;if(current==='boss')goRefresh()}).catch(()=>{})}
-    out.push({name:kind+' '+hit.en,tier:kind==='Dynamax'?'Dynamax Battle':'Gigantamax Battle',max:true,shiny:false,types:info?info.types:[],image:info?info.photo:'',cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[]});
+    out.push({name:kind+' '+hit.en,tier:kind==='Dynamax'?'Dynamax Battle':'Gigantamax Battle',max:true,shiny:false,types:info?info.types:[],image:info?info.photo:'',cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[],when:soon?e.start.slice(5).replace('-','/')+(e.sTime?' '+e.sTime:''):''});
   });
   return out;
 }
@@ -1310,7 +1311,8 @@ function renderBoss(root,p,keep){
   p=p||PAGES.find(x=>x.id==='boss');
   const raid=GO.raids.filter(b=>!b.max),mx=GO.raids.filter(b=>b.max).concat(GO.pgaMax&&GO.pgaMax.length?GO.pgaMax.map(fillMax).sort((x,y)=>(y.star||0)-(x.star||0)):maxBosses());
   const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
-  const body=(GO.raids.length||mx.length)?sec('團體戰 Boss',raid,0)+sec('超極巨 / 極巨 Boss',mx,raid.length):`<div class="empty">${GO.busy?'載入中…':'目前沒有 Boss 資料'}</div>`;
+  const soon=maxBosses(true);
+  const body=(GO.raids.length||mx.length||soon.length)?sec('團體戰 Boss',raid,0)+sec('超極巨 / 極巨 Boss',mx,raid.length)+sec('即將登場（極巨活動）',soon,raid.length+mx.length):`<div class="empty">${GO.busy?'載入中…':'目前沒有 Boss 資料'}</div>`;
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="list">${body}<div class="syncMsg" id="goMsg">${esc(GO.msg)}</div>${mx.length?'':'<div class="syncMsg"><a href="#" data-act="goDbg">沒有極巨 Boss？點這裡看資料內容</a></div>'}</div>`;
   if(!keep){goSync(false);pkLoad().then(()=>{if(current==='boss')goRefresh()}).catch(()=>{})}
 }
