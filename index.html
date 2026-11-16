@@ -1077,24 +1077,26 @@ function openOwn(id){
 // 資料來源：bigfoott/ScrapedDuck 的 data 分支（內容來自 LeekDuck.com）。欄位用防呆方式讀取。
 const GO_SRC=n=>['https://raw.githubusercontent.com/bigfoott/ScrapedDuck/data/'+n+'.min.json','https://raw.githubusercontent.com/bigfoott/ScrapedDuck/data/'+n+'.json','https://cdn.jsdelivr.net/gh/bigfoott/ScrapedDuck@data/'+n+'.min.json','https://cdn.jsdelivr.net/gh/bigfoott/ScrapedDuck@data/'+n+'.json'];
 const GO={events:[],raids:[],t:0,msg:'',busy:null,dbg:''};
-const PGA=['https://pokemon-go-api.github.io/pokemon-go-api/api/raidboss.json'];
-// pokemon-go-api 的格式我沒有驗證過，所以用盡量寬鬆的方式找出「名稱含 max 的分類」
+const PGA=['https://pokemon-go-api.github.io/pokemon-go-api/api/maxbattles.json'];
+// pokemon-go-api 的 maxbattles.json：{currentList:{tier_1:[...],...,tier_6:[...]}}（每筆欄位我沒驗證過，所以每個欄位都寬鬆讀取）
 function pgaMax(j){
-  const out=[];
-  const walk=(o,key,depth)=>{
-    if(!o||typeof o!=='object'||depth>6)return;
-    if(Array.isArray(o)){
-      if(/max/i.test(key))o.forEach(x=>{
-        if(!x||typeof x!=='object')return;
-        const nm=(x.names&&(x.names.English||x.names.en))||x.name||x.id;
-        const ty=[x.primaryType,x.secondaryType].map(t=>t&&(t.type||t.names&&t.names.English||t)).filter(Boolean).map(t=>String(t).toLowerCase().replace(/^pokemon_type_/,'')).filter(k=>TMAP[k]);
-        const im=(x.assets&&(x.assets.image||x.assets.shinyImage))||x.image||'';
-        if(nm)out.push({name:String(nm).replace(/_/g,' '),tier:String(key),max:true,shiny:false,types:ty,image:im,cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[]});
-      });
-      else o.forEach(x=>walk(x,key,depth+1));
-    }else Object.keys(o).forEach(k=>walk(o[k],k,depth+1));
-  };
-  walk(j,'',0);return out;
+  const out=[],cl=(j&&j.currentList)||{};
+  const tn=x=>String(x&&(x.type||x.id||(x.names&&x.names.English))||x||'').toLowerCase().replace(/^pokemon_type_/,'');
+  Object.keys(cl).forEach(k=>{
+    const star=+(k.match(/\d+/)||[0])[0];
+    (Array.isArray(cl[k])?cl[k]:[]).forEach(x=>{
+      if(!x||typeof x!=='object')return;
+      const nm=(x.names&&(x.names.English||x.names.en))||x.name||x.id;if(!nm)return;
+      const zh=x.names&&(x.names.ChineseTraditional||x.names['Chinese Traditional']||x.names.zh_TW||x.names.zhHant||'');
+      const ty=[x.primaryType,x.secondaryType].filter(Boolean).map(tn).filter(t=>TMAP[t]);
+      const im=(x.assets&&(x.assets.image||x.assets.shinyImage))||x.image||'';
+      const cr=Array.isArray(x.cpRange)?x.cpRange:[],cb=Array.isArray(x.cpRangeBoost)?x.cpRangeBoost:[];
+      const num=v=>{v=+v;return isFinite(v)&&v>0?v:null};
+      out.push({name:String(nm).replace(/_/g,' '),zh:zh||'',star,tier:star>=6?'Gigantamax Battle':'Dynamax Battle',max:true,shiny:!!(x.shinyAvailable||x.canBeShiny),types:ty,image:im,
+        cpMin:num(cr[0]),cpMax:num(cr[1]),bMin:num(cb[0]),bMax:num(cb[1]),weather:[]});
+    });
+  });
+  return out;
 }
 const GO_TTL=3600e3;
 function goColor(k){let h=0;for(const c of String(k||'x'))h=(h*31+c.charCodeAt(0))>>>0;return EV_COLORS[h%EV_COLORS.length]}
@@ -1155,12 +1157,12 @@ async function goSync(force){
         'raids 階級：'+[...new Set((ra||[]).map(r=>r&&r.tier))].join(' | '),
         'events 類型：'+[...new Set((ev||[]).map(e=>e&&e.eventType))].join(' | '),
         '名稱含 max 的活動：'+(ev||[]).filter(e=>/max|dynamax|gigantamax/i.test((e.name||'')+(e.eventType||''))).map(e=>e.name+' ['+e.eventType+'] extra:'+Object.keys(e.extraData||{}).join(',')).join(' ; '),
-        'pokemon-go-api：'+(pg?('頂層 '+Object.keys(pg).join(',')+'；max 筆數 '+GO.pgaMax.length):'取不到')
+        'maxbattles.json：'+(pg?('頂層 '+Object.keys(pg).join(',')+'；筆數 '+GO.pgaMax.length+'；第一筆 '+JSON.stringify(((pg.currentList||{}).tier_1||[])[0]||null).slice(0,600)):'取不到')
       ].join('\n');
       GO.events=goNorm(ev);
       if(ra)GO.raids=goNormRaids(ra);
       GO.t=Date.now();
-      GO.msg='資料來源：LeekDuck / ScrapedDuck　更新於 '+new Date(GO.t).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      GO.msg='資料來源：LeekDuck、Snack Nap（pokemon-go-api）　更新於 '+new Date(GO.t).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
       if(IDB.db){try{await IDB.put({v:1,t:GO.t,events:GO.events,raids:GO.raids},'goData')}catch(e){}}
     }catch(e){GO.msg=GO.t?'無法更新，顯示上次的資料':'無法取得活動資料（網路或資料來源問題）'}
     GO.busy=null;goRefresh();
@@ -1225,7 +1227,7 @@ function effectiveness(types){
 // 建議人數：LeekDuck 沒有提供，這裡只依階級做粗略估計
 function tierZh(b){
   const t=b.tier.toLowerCase(),n=b.name.toLowerCase();
-  if(b.max)return /gigantamax|gmax/.test(t+' '+n)?'超極巨戰':'極巨戰';
+  if(b.max){const ns=['','一','二','三','四','五'];return /gigantamax|gmax/.test(t+' '+n)?'超極巨戰':(b.star&&ns[b.star]?ns[b.star]+'星極巨戰':'極巨戰')}
   const num={'1':'一','3':'三','4':'四','5':'五','6':'六'};
   const m=t.match(/[1-6]/);
   let z='';
@@ -1255,7 +1257,7 @@ function bossCard(b,i){
   return `<div class="bCard" style="--c:${col}" data-i="${i}">
     <div class="bTop" data-act="bToggle">
       <div class="bPh">${b.image?`<img src="${esc(b.image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">`:''}</div>
-      <div class="bTx"><div class="bNm">${esc(bossZh(b.name))}</div><div class="bTps">${tpills(b.types)}</div>
+      <div class="bTx"><div class="bNm">${esc(b.zh||bossZh(b.name))}</div><div class="bTps">${tpills(b.types)}</div>
         <div class="bSm">${tierZh(b)}${b.cpMax?'　100% CP '+b.cpMax:''}${b.shiny?'　✨':''}</div></div>
       <div class="bArr">▼</div>
     </div>
@@ -1270,6 +1272,15 @@ function bossCard(b,i){
 // 再用 PokeAPI 的名單確認真的是寶可夢，屬性和圖片也向 PokeAPI 查。標題沒寫名字的活動（如 Max Battle Day）抓不到。
 const MAXT={};
 function nk(x){return String(x).toLowerCase().replace(/[^a-z0-9]/g,'')}
+function fillMax(b){
+  if(b.types.length&&b.image||!PK.list)return b;
+  const hit=PK.list.find(x=>x.en&&nk(x.en)===nk(String(b.name).replace(/^(gigantamax|dynamax)\s+/i,'').replace(/\s*\(.*\)\s*$/,'')));
+  if(!hit)return b;
+  const info=MAXT[hit.id];
+  if(!info&&!MAXT['p'+hit.id]){MAXT['p'+hit.id]=1;pkInfo(hit.id).then(i=>{MAXT[hit.id]=i;if(current==='boss')goRefresh()}).catch(()=>{})}
+  if(!info)return b;
+  return Object.assign({},b,{types:b.types.length?b.types:info.types,image:b.image||info.photo});
+}
 function maxBosses(){
   if(!PK.list)return [];
   const today=todayStr(),out=[],seen={};
@@ -1288,8 +1299,7 @@ function maxBosses(){
 }
 function renderBoss(root,p,keep){
   p=p||PAGES.find(x=>x.id==='boss');
-  const raid=GO.raids.filter(b=>!b.max),mx=GO.raids.filter(b=>b.max).concat(maxBosses());
-  if(!mx.length&&GO.pgaMax)GO.pgaMax.forEach(b=>mx.push(b));
+  const raid=GO.raids.filter(b=>!b.max),mx=GO.raids.filter(b=>b.max).concat(GO.pgaMax&&GO.pgaMax.length?GO.pgaMax.map(fillMax).sort((x,y)=>(y.star||0)-(x.star||0)):maxBosses());
   const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
   const body=(GO.raids.length||mx.length)?sec('團體戰 Boss',raid,0)+sec('超極巨 / 極巨 Boss',mx,raid.length):`<div class="empty">${GO.busy?'載入中…':'目前沒有 Boss 資料'}</div>`;
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="list">${body}<div class="syncMsg" id="goMsg">${esc(GO.msg)}</div>${mx.length?'':'<div class="syncMsg"><a href="#" data-act="goDbg">沒有極巨 Boss？點這裡看資料內容</a></div>'}</div>`;
