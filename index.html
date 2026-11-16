@@ -1194,7 +1194,7 @@ function openGoEvent(id){
 
 /* ================= Boss 頁 ================= */
 const WX_ZH={'sunny':'晴天','clear':'晴天','rainy':'下雨','rain':'下雨','partly cloudy':'多雲','cloudy':'陰天','windy':'大風','snow':'下雪','fog':'起霧','foggy':'起霧'};
-const NAME_PFX=[['shadow ','暗影 '],['mega ','Mega '],['primal ','原始 '],['alolan ','阿羅拉 '],['galarian ','伽勒爾 '],['hisuian ','洗翠 '],['paldean ','帕底亞 '],['gigantamax ','超極巨 '],['dynamax ','極巨 ']];
+const NAME_PFX=[['shadow ','暗影 '],['mega ','Mega '],['primal ','原始 '],['alolan ','阿羅拉 '],['galarian ','伽勒爾 '],['hisuian ','洗翠 '],['paldean ','帕底亞 '],['gigantamax ','超極巨 '],['eternamax ','無極巨 '],['dynamax ','極巨 ']];
 function bossZh(name){
   if(!PK.list)return name;
   let n=String(name),pre='',low=n.toLowerCase();
@@ -1266,33 +1266,25 @@ function bossCard(b,i){
     </div>
   </div>`;
 }
-// 極巨 Boss：ScrapedDuck 的 raids.json 沒有，改從目前進行中的極巨戰活動取名單，屬性用 PokeAPI 查
+// 極巨 Boss：ScrapedDuck 沒有 Boss 名單，只好從「進行中的極巨活動標題」抓寶可夢名字（例如 Dynamax Espurr during Max Monday），
+// 再用 PokeAPI 的名單確認真的是寶可夢，屬性和圖片也向 PokeAPI 查。標題沒寫名字的活動（如 Max Battle Day）抓不到。
+const MAXT={};
+function nk(x){return String(x).toLowerCase().replace(/[^a-z0-9]/g,'')}
 function maxBosses(){
+  if(!PK.list)return [];
   const today=todayStr(),out=[],seen={};
   GO.events.forEach(e=>{
     if(e.start>today||isExpired(e))return;
-    const txt=e.type+' '+e.text;
-    if(!/max|dynamax|gigantamax/i.test(txt))return;
-    const gm=/gigantamax/i.test(txt);
-    e.mons.forEach(m=>{
-      if(!m.name||seen[m.name])return;seen[m.name]=1;
-      const nm=gm&&!/gigantamax|dynamax/i.test(m.name)?'Gigantamax '+m.name:m.name;
-      out.push({name:nm,tier:gm?'Gigantamax Battle':'Dynamax Battle',max:true,shiny:false,types:maxTypes(m.name),image:m.image,cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[]});
-    });
+    const m=String(e.text).match(/\b(Gigantamax|Dynamax|Eternamax)\s+(.+?)(?=\s+(?:during|returns?|max|power|raids?|battles?|event|weekend|day|in)\b|[:,!(]|$)/i);
+    if(!m)return;
+    const kind=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase(),base=m[2].trim();
+    const hit=PK.list.find(x=>x.en&&nk(x.en)===nk(base));
+    if(!hit||seen[hit.id+kind])return;seen[hit.id+kind]=1;
+    const info=MAXT[hit.id];
+    if(!info&&!MAXT['p'+hit.id]){MAXT['p'+hit.id]=1;pkInfo(hit.id).then(i=>{MAXT[hit.id]=i;if(current==='boss')goRefresh()}).catch(()=>{})}
+    out.push({name:kind+' '+hit.en,tier:kind==='Dynamax'?'Dynamax Battle':'Gigantamax Battle',max:true,shiny:false,types:info?info.types:[],image:info?info.photo:'',cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[]});
   });
   return out;
-}
-const MAXT={};
-function maxTypes(name){
-  if(MAXT[name])return MAXT[name];
-  if(!PK.list)return [];
-  const nk=x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,'');
-  let n=String(name).replace(/^(gigantamax|dynamax)\s+/i,'').replace(/\s*\(.*\)\s*$/,'');
-  const hit=PK.list.find(e=>e.en&&nk(e.en)===nk(n));
-  if(!hit)return [];
-  if(!MAXT.p)MAXT.p={};
-  if(!MAXT.p[hit.id]){MAXT.p[hit.id]=1;pkInfo(hit.id).then(i=>{MAXT[name]=i.types;if(current==='boss')goRefresh()}).catch(()=>{})}
-  return [];
 }
 function renderBoss(root,p,keep){
   p=p||PAGES.find(x=>x.id==='boss');
