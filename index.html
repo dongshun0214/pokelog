@@ -1084,7 +1084,7 @@ function pgaMax(j){
   const tn=x=>String(x&&(x.type||x.id||(x.names&&x.names.English))||x||'').toLowerCase().replace(/^pokemon_type_/,'');
   Object.keys(cl).forEach(k=>{
     const star=+(k.match(/\d+/)||[0])[0];
-    (Array.isArray(cl[k])?cl[k]:[]).forEach(x=>{
+    (Array.isArray(cl[k])?cl[k]:(cl[k]&&typeof cl[k]==='object'?Object.values(cl[k]):[])).forEach(x=>{
       if(!x||typeof x!=='object')return;
       const nm=(x.names&&(x.names.English||x.names.en))||x.name||x.id;if(!nm)return;
       const zh=x.names&&(x.names.ChineseTraditional||x.names['Chinese Traditional']||x.names.zh_TW||x.names.zhHant||'');
@@ -1157,7 +1157,8 @@ async function goSync(force){
         'raids 階級：'+[...new Set((ra||[]).map(r=>r&&r.tier))].join(' | '),
         'events 類型：'+[...new Set((ev||[]).map(e=>e&&e.eventType))].join(' | '),
         '名稱含 max 的活動：'+(ev||[]).filter(e=>/max|dynamax|gigantamax/i.test((e.name||'')+(e.eventType||''))).map(e=>e.name+' ['+e.eventType+'] extra:'+Object.keys(e.extraData||{}).join(',')).join(' ; '),
-        'maxbattles.json：'+(pg?('頂層 '+Object.keys(pg).join(',')+'；筆數 '+GO.pgaMax.length+'；第一筆 '+JSON.stringify(((pg.currentList||{}).tier_1||[])[0]||null).slice(0,600)):'取不到')
+        'maxbattles.json：'+(pg?('筆數 '+GO.pgaMax.length+'；原始內容 '+JSON.stringify(pg).slice(0,700)):'取不到（網路/CORS）'),
+        '極巨活動日期：'+(ev||[]).filter(e=>/dynamax|gigantamax|eternamax/i.test(e.name||'')).map(e=>e.name+' '+e.start+'~'+e.end).join(' ; ')
       ].join('\n');
       GO.events=goNorm(ev);
       if(ra)GO.raids=goNormRaids(ra);
