@@ -108,6 +108,8 @@ body:not([data-page="home"]) #page{display:flex}
 }
 .chip svg{width:15px;height:15px;display:block;margin-bottom:1px}
 .chips.filtering .chip{opacity:.3}
+.chip.bt{font-size:13px}
+.chips.off .chip{opacity:.25;pointer-events:none}
 .chips.filtering .chip.sel{opacity:1;border:4px solid rgba(0,0,0,.5)}
 .list{flex:1;overflow-y:auto;padding:10px 12px calc(env(safe-area-inset-bottom) + 24px);-webkit-overflow-scrolling:touch}
 .row{display:grid;grid-template-columns:34px 74px 1fr 86px;gap:4px;margin-bottom:4px}
@@ -402,13 +404,12 @@ function applyBall(){
 /* ================= 頁面設定（之後要增加/改名改這裡） ================= */
 const PAGES=[
  {id:'rank',label:'排名',title:'排名',render:renderRank},
- {id:'events',label:'關注活動',title:'關注活動',render:renderCalendar},
- {id:'gevents',label:'所有活動',title:'所有活動',render:renderCalendar,go:true},
- {id:'boss',label:'Boss',title:'團體戰 / 極巨戰',render:renderBoss},
+ {id:'events',label:'活動',title:'活動',render:renderCalendar},
+ {id:'boss',label:'Boss',title:'Boss',render:renderBoss},
  {id:'types',label:'屬性表',title:'屬性表',render:renderTypes}
 ];
 let current='home';
-const UI={mode:'team',filter:null,q:''};
+const UI={mode:'team',filter:null,q:'',evView:'follow',bossMode:'team',bStars:[],bShadow:false};
 
 function go(id){
   current=id;
@@ -663,6 +664,10 @@ const imgOr=(x,cls)=>x.photo?`<img src="${x.photo}" alt="">`:`<span class="${cls
 function renderBlank(root,p){
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="shell">建置中…</div>`;
 }
+function segSelect(id,aria,cur,opts){
+  const lab=(opts.find(o=>o[0]===cur)||opts[0])[1];
+  return `<div class="modeBox rk"><div class="mb"><i class="tri"></i><span>${lab}</span></div><select id="${id}" aria-label="${aria}">${opts.map(o=>`<option value="${o[0]}"${o[0]===cur?' selected':''}>${o[1]}</option>`).join('')}</select></div>`;
+}
 function modeSelect(){
   return `<div class="modeBox rk"><div class="mb"><i class="tri"></i><span>${UI.mode==='team'?'團體戰':'極巨戰'}</span></div><select id="modeSel" aria-label="戰鬥類型"><option value="team"${UI.mode==='team'?' selected':''}>團體戰</option><option value="max"${UI.mode==='max'?' selected':''}>極巨戰</option></select></div>`;
 }
@@ -833,10 +838,11 @@ window.addEventListener('resize',placeHome);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(placeHome);
 
 function renderCalendar(root,p){
-  p=p||PAGES.find(x=>x.id===current&&x.render===renderCalendar)||PAGES.find(x=>x.id==='events');
+  p=p||PAGES.find(x=>x.id==='events');
+  const G=UI.evView==='all';
   const first=Date.UTC(CAL.y,CAL.m,1),dim=new Date(Date.UTC(CAL.y,CAL.m+1,0)).getUTCDate();
   const off=new Date(first).getUTCDay(),weeks=Math.ceil((off+dim)/7),gs=first-off*DAY;
-  const evs=(p.go?GO.events:DB.events).slice().sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:(pd(b.end)-pd(b.start))-(pd(a.end)-pd(a.start)));
+  const evs=(G?GO.events:DB.events).slice().sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:(pd(b.end)-pd(b.start))-(pd(a.end)-pd(a.start)));
   const today=todayStr();
   let grid='';
   for(let w=0;w<weeks;w++){
@@ -844,11 +850,11 @@ function renderCalendar(root,p){
     let cells='';
     for(let i=0;i<7;i++){
       const ms=ws+i*DAY,s=iso(ms),inM=new Date(ms).getUTCMonth()===CAL.m;
-      const dots=p.go?`<div class="dots">${evs.filter(e=>e.start<=s&&e.end>=s).map(e=>`<i style="background:${e.color}"></i>`).join('')}</div>`:'';
+      const dots=G?`<div class="dots">${evs.filter(e=>e.start<=s&&e.end>=s).map(e=>`<i style="background:${e.color}"></i>`).join('')}</div>`:'';
       cells+=`<div class="dn${inM?'':' out'}" style="grid-column:${i+1}"><span class="${s===today?'today':''}">${new Date(ms).getUTCDate()}</span>${dots}</div>`;
     }
     const lanes=[];let bars='';
-    (p.go?[]:evs.filter(e=>e.start<=weS&&e.end>=wsS)).forEach(e=>{
+    (G?[]:evs.filter(e=>e.start<=weS&&e.end>=wsS)).forEach(e=>{
       const sc=Math.max(0,Math.round((pd(e.start)-ws)/DAY)),ec=Math.min(6,Math.round((pd(e.end)-ws)/DAY));
       let l=lanes.findIndex(last=>last<sc);
       if(l<0){l=lanes.length;lanes.push(-1)}
@@ -862,16 +868,16 @@ function renderCalendar(root,p){
   const list=orderEvents(evs.filter(e=>e.start<=ms1&&e.end>=ms0));
   const nowT=Date.now();
   const cards=list.map(e=>e.go?goCard(e,nowT):`<div class="evCard${isLight(e.color)?' lt':''}" style="--c:${isExpired(e,nowT)?rgba(e.color,.5):e.color}" data-act="evEdit" data-id="${e.id}">
-      ${e.photo?`<div class="evPh"${p.go?' data-act="boss"':''}><img src="${e.photo}" alt=""></div>`:''}
+      ${e.photo?`<div class="evPh"${G?' data-act="boss"':''}><img src="${e.photo}" alt=""></div>`:''}
       <div class="evTx">${evLines(e)}</div>
     </div>`).join('')||'<div class="empty">這個月沒有活動</div>';
-  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2><button class="addBtn" data-act="evAdd" aria-label="新增活動"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
+  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2><button class="addBtn rk" data-act="evAdd" aria-label="新增活動"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>${segSelect('evSel','活動顯示',UI.evView,[['follow','關注活動'],['all','所有活動']])}</div>
     <div class="evTop"><div class="cal">
       <div class="calHead"><button class="calBtn" data-act="calPrev" aria-label="上個月">‹</button><b>${CAL.y} 年 ${CAL.m+1} 月</b><button class="calBtn" data-act="calNext" aria-label="下個月">›</button></div>
       <div class="wkHead">${['日','一','二','三','四','五','六'].map(w=>`<div>${w}</div>`).join('')}</div>
       ${grid}</div></div>
-    <div class="list evCards">${cards}${p.go?'<div class="syncMsg" id="goMsg">'+esc(GO.msg)+'</div>':''}</div>`;
-  if(p.go)goSync(false);
+    <div class="list evCards">${cards}${G?'<div class="syncMsg" id="goMsg">'+esc(GO.msg)+'</div>':''}</div>`;
+  if(G)goSync(false);
 }
 function openEvent(id){
   const old=id?DB.events.find(x=>x.id===id):null;
@@ -936,7 +942,8 @@ $('#page').addEventListener('click',e=>{
   else if(a==='evAdd')openEvent(null);
   else if(a==='evEdit')openEvent(t.dataset.id);
   else if(a==='goOpen'){if(e.target.closest('.evPh'))go('boss');else openGoEvent(t.dataset.id)}
-  else if(a==='boss')go('boss');
+  else if(a==='boss'){UI.bossMode='team';go('boss')}
+  else if(a==='bChip'){const k=t.dataset.k;if(k==='s')UI.bShadow=!UI.bShadow;else UI.bStars=UI.bStars.includes(k)?UI.bStars.filter(x=>x!==k):UI.bStars.concat(k);const l=$('#page .list'),st=l?l.scrollTop:0;renderBoss($('#page'),null,true);const l2=$('#page .list');if(l2)l2.scrollTop=st}
   else if(a==='goDbg'){e.preventDefault();const w=openSheet('<h3>資料內容</h3><pre style="white-space:pre-wrap;word-break:break-all;font-size:12px">'+esc(GO.dbg||'尚未載入')+'</pre><div class="btns"><button class="btn" id="cancelBtn">關閉</button></div>');w.querySelector('#cancelBtn').onclick=closeSheet}
   else if(a==='bToggle')t.closest('.bCard').classList.toggle('open');
   else if(a==='calPrev'||a==='calNext'){CAL.m+=a==='calNext'?1:-1;if(CAL.m<0){CAL.m=11;CAL.y--}if(CAL.m>11){CAL.m=0;CAL.y++}renderCalendar($('#page'))}
@@ -954,6 +961,8 @@ $('#page').addEventListener('change',e=>{
     else if(v==='clear'){UI.tf=[];UI.tmon=null;refreshTypes()}
     return;
   }
+  if(e.target.id==='evSel'){UI.evView=e.target.value;renderCalendar($('#page'))}
+  if(e.target.id==='bossSel'){UI.bossMode=e.target.value;UI.bStars=[];UI.bShadow=false;renderBoss($('#page'),null,true);goSync(false)}
   if(e.target.id==='modeSel'){UI.mode=e.target.value;UI.filter=null;renderRank($('#page'))}
 });
 
@@ -1182,7 +1191,7 @@ function goRefresh(){
   const p=PAGES.find(x=>x.id===current);
   if(!p)return;
   if(p.id==='boss'){const l=$('#page .list');const st=l?l.scrollTop:0;renderBoss($('#page'),p,true);const l2=$('#page .list');if(l2)l2.scrollTop=st}
-  else if(p.go){const m=$('#goMsg');if(m)m.textContent=GO.msg;if(GO._n!==GO.events.length+':'+GO.t){GO._n=GO.events.length+':'+GO.t;const l=$('#page .list');const st=l?l.scrollTop:0;renderCalendar($('#page'),p);const l2=$('#page .list');if(l2)l2.scrollTop=st}}
+  else if(p.id==='events'&&UI.evView==='all'){const m=$('#goMsg');if(m)m.textContent=GO.msg;if(GO._n!==GO.events.length+':'+GO.t){GO._n=GO.events.length+':'+GO.t;const l=$('#page .list');const st=l?l.scrollTop:0;renderCalendar($('#page'),p);const l2=$('#page .list');if(l2)l2.scrollTop=st}}
 }
 function goCard(e,nowT){
   const ex=isExpired(e,nowT),c=ex?rgba(e.color,.5):e.color;
@@ -1307,13 +1316,30 @@ function maxBosses(soon){
   });
   return out;
 }
+const B_CHIPS=[['1','一星','#5aa9e6'],['3','三星','#e8a33d'],['5','五星','#d9548a'],['s','暗影','#5b4b8a']];
+function raidStar(b){const m=String(b.tier).match(/[1-6]/);return m?m[0]:''}
+function isShadow(b){return /shadow/i.test(b.name)||/shadow/i.test(b.tier)}
+function bossPass(b){
+  if(!UI.bStars.length&&!UI.bShadow)return true;
+  if(UI.bShadow&&!isShadow(b))return false;
+  if(UI.bStars.length&&!UI.bStars.includes(raidStar(b)))return false;
+  return true;
+}
 function renderBoss(root,p,keep){
   p=p||PAGES.find(x=>x.id==='boss');
-  const raid=GO.raids.filter(b=>!b.max),mx=GO.raids.filter(b=>b.max).concat(GO.pgaMax&&GO.pgaMax.length?GO.pgaMax.map(fillMax).sort((x,y)=>(y.star||0)-(x.star||0)):maxBosses());
-  const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
+  const isMax=UI.bossMode==='max';
+  const raid=GO.raids.filter(b=>!b.max&&bossPass(b));
+  const mx=GO.raids.filter(b=>b.max).concat(GO.pgaMax&&GO.pgaMax.length?GO.pgaMax.map(fillMax).sort((x,y)=>(y.star||0)-(x.star||0)):maxBosses());
   const soon=maxBosses(true);
-  const body=(GO.raids.length||mx.length||soon.length)?sec('團體戰 Boss',raid,0)+sec('超極巨 / 極巨 Boss',mx,raid.length)+sec('即將登場（極巨活動）',soon,raid.length+mx.length):`<div class="empty">${GO.busy?'載入中…':'目前沒有 Boss 資料'}</div>`;
-  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2></div><div class="list">${body}<div class="syncMsg" id="goMsg">${esc(GO.msg)}</div>${mx.length?'':'<div class="syncMsg"><a href="#" data-act="goDbg">沒有極巨 Boss？點這裡看資料內容</a></div>'}</div>`;
+  const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
+  let body;
+  if(!isMax)body=raid.length?sec('',raid,0):`<div class="empty">${GO.busy?'載入中…':(GO.raids.length?'沒有符合的 Boss':'目前沒有 Boss 資料')}</div>`;
+  else body=(mx.length||soon.length)?sec('現在的極巨 Boss',mx,0)+sec('即將登場（極巨活動）',soon,mx.length):`<div class="empty">${GO.busy?'載入中…':'目前沒有極巨 Boss 資料'}</div>`;
+  const filtering=!isMax&&(UI.bStars.length||UI.bShadow);
+  const chips=B_CHIPS.map(c=>{const on=c[0]==='s'?UI.bShadow:UI.bStars.includes(c[0]);return `<button class="chip bt${on?' sel':''}"${isMax?' disabled':''} style="background:${c[2]}" data-act="bChip" data-k="${c[0]}"><span>${c[1]}</span></button>`}).join('');
+  root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2>${segSelect('bossSel','戰鬥類型',UI.bossMode,[['team','團體戰'],['max','極巨戰']])}</div>
+    <div class="chips${filtering?' filtering':''}${isMax?' off':''}">${chips}</div>
+    <div class="list">${body}<div class="syncMsg" id="goMsg">${esc(GO.msg)}</div>${isMax&&!mx.length?'<div class="syncMsg"><a href="#" data-act="goDbg">沒有極巨 Boss？點這裡看資料內容</a></div>':''}</div>`;
   if(!keep){goSync(false);pkLoad().then(()=>{if(current==='boss')goRefresh()}).catch(()=>{})}
 }
 
