@@ -878,7 +878,7 @@ function renderCalendar(root,p){
       <div class="wkHead">${['日','一','二','三','四','五','六'].map(w=>`<div>${w}</div>`).join('')}</div>
       ${grid}</div></div>
     <div class="list evCards">${cards}${G?'<div class="syncMsg" id="goMsg">'+esc(GO.msg)+'</div>':''}</div>`;
-  if(G)goSync(false);
+  if(G){goSync(false);if(!PK.list)pkLoad().then(()=>evRerender()).catch(()=>{})}
 }
 function openEvent(id){
   const old=id?DB.events.find(x=>x.id===id):null;
@@ -1194,9 +1194,31 @@ function goRefresh(){
   if(p.id==='boss'){const l=$('#page .list');const st=l?l.scrollTop:0;renderBoss($('#page'),p,true);const l2=$('#page .list');if(l2)l2.scrollTop=st}
   else if(p.id==='events'&&UI.evView==='all'){const m=$('#goMsg');if(m)m.textContent=GO.msg;if(GO._n!==GO.events.length+':'+GO.t){GO._n=GO.events.length+':'+GO.t;const l=$('#page .list');const st=l?l.scrollTop:0;renderCalendar($('#page'),p);const l2=$('#page .list');if(l2)l2.scrollTop=st}}
 }
+// 活動資料沒給寶可夢時，從標題找出提到的寶可夢（用 PokeAPI 名單比對），圖片用 PokeAPI 的官方圖
+function titleMon(e){
+  if(e._tm!==undefined)return e._tm;
+  if(!PK.list)return null;
+  if(!PK.byLen)PK.byLen=PK.list.filter(x=>x.id<10000&&x.en&&x.en.length>=3).sort((a,b)=>b.en.length-a.en.length);
+  const t=' '+String(e.text).toLowerCase().replace(/[^a-z0-9.\u2019' -]/g,' ')+' ';
+  const hit=PK.byLen.find(x=>t.includes(' '+x.en.toLowerCase()+' ')||t.includes(' '+x.en.toLowerCase()+"'s "));
+  e._tm=hit?{id:hit.id,name:hit.en}:null;
+  return e._tm;
+}
+function titleMonImg(e){
+  const m=titleMon(e);if(!m)return '';
+  const info=MAXT[m.id];
+  if(!info&&!MAXT['p'+m.id]){MAXT['p'+m.id]=1;pkInfo(m.id).then(i=>{MAXT[m.id]=i;evRerender()}).catch(()=>{})}
+  return info?info.photo:'';
+}
+function evRerender(){
+  if(current!=='events'||UI.evView!=='all')return;
+  const l=$('#page .list'),st=l?l.scrollTop:0;renderCalendar($('#page'));
+  const l2=$('#page .list');if(l2)l2.scrollTop=st;
+}
 function goCard(e,nowT){
   const ex=isExpired(e,nowT),c=ex?rgba(e.color,.5):e.color;
-  const ph=e.mons.filter(m=>m.image).map(m=>`<div class="evPh"><img src="${esc(m.image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`).join('');
+  let ph=e.mons.filter(m=>m.image).map(m=>`<div class="evPh"><img src="${esc(m.image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`).join('');
+  if(!ph){const im=titleMonImg(e);if(im)ph=`<div class="evPh"><img src="${im}" alt=""></div>`}
   const tag=GO_TYPE_ZH[e.type]||e.heading||'';
   return `<div class="evCard go${isLight(e.color)?' lt':''}" style="--c:${c}" data-act="goOpen" data-id="${esc(e.id)}">
     ${ph?`<div class="goPh">${ph}</div>`:''}
