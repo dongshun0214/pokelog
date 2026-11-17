@@ -220,7 +220,7 @@ body:not([data-page="home"]) #page{display:flex}
 .evCard .goPh .evPh{width:46px;height:46px;background:rgba(255,255,255,.35);border-radius:10px}
 .evCard .goTag{display:inline-block;font-size:11px;font-weight:700;background:rgba(0,0,0,.22);color:#fff;border-radius:8px;padding:2px 6px;margin-bottom:3px;text-shadow:none}
 .evCard.lt .goTag{background:rgba(0,0,0,.12);color:#4a4020}
-.syncMsg{font-size:12px;color:#3a3f5c;padding:6px 6px 0;text-align:center}
+.syncMsg{font-size:12px;color:#3a3f5c;padding:6px 6px 0;text-align:center;white-space:pre-line}
 .bCard{background:var(--c);color:#fff;border-radius:14px;margin-bottom:8px;text-shadow:0 1px 2px rgba(0,0,0,.3);overflow:hidden}
 .bTop{display:flex;align-items:center;gap:10px;padding:10px 12px}
 .bPh{width:64px;height:64px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.3);border-radius:12px}
@@ -845,13 +845,17 @@ function renderCalendar(root,p){
   const off=new Date(first).getUTCDay(),weeks=Math.ceil((off+dim)/7),gs=first-off*DAY;
   const evs=(G?GO.events:DB.events).slice().sort((a,b)=>a.start<b.start?-1:a.start>b.start?1:(pd(b.end)-pd(b.start))-(pd(a.end)-pd(a.start)));
   const today=todayStr();
+  const ms0=iso(first),ms1=iso(first+(dim-1)*DAY);
+  const list=orderEvents(evs.filter(e=>e.start<=ms1&&e.end>=ms0));
+  const RB=['#e0524f','#ee8a3a','#f1d26a','#4fa87a','#3f8fd0','#4b4fb0','#9a5fcf'],cmap={};
+  if(G){let k=0;list.forEach(e=>{cmap[e.id]=RB[k++%7]});orderEvents(evs.filter(e=>!cmap[e.id]&&e.start<=iso(gs+weeks*7*DAY-DAY)&&e.end>=iso(gs))).forEach(e=>{cmap[e.id]=RB[k++%7]})}
   let grid='';
   for(let w=0;w<weeks;w++){
     const ws=gs+w*7*DAY,wsS=iso(ws),weS=iso(ws+6*DAY);
     let cells='';
     for(let i=0;i<7;i++){
       const ms=ws+i*DAY,s=iso(ms),inM=new Date(ms).getUTCMonth()===CAL.m;
-      const dots=G?`<div class="dots">${evs.filter(e=>e.start<=s&&e.end>=s).map(e=>`<i style="background:${e.color}"></i>`).join('')}</div>`:'';
+      const dots=G?`<div class="dots">${evs.filter(e=>e.start<=s&&e.end>=s).map(e=>`<i style="background:${cmap[e.id]||e.color}"></i>`).join('')}</div>`:'';
       cells+=`<div class="dn${inM?'':' out'}" style="grid-column:${i+1}"><span class="${s===today?'today':''}">${new Date(ms).getUTCDate()}</span>${dots}</div>`;
     }
     const lanes=[];let bars='';
@@ -865,10 +869,8 @@ function renderCalendar(root,p){
     });
     grid+=`<div class="wkRow">${cells}${bars}</div>`;
   }
-  const ms0=iso(first),ms1=iso(first+(dim-1)*DAY);
-  const list=orderEvents(evs.filter(e=>e.start<=ms1&&e.end>=ms0));
   const nowT=Date.now();
-  const cards=list.map(e=>e.go?goCard(e,nowT):`<div class="evCard${isLight(e.color)?' lt':''}" style="--c:${isExpired(e,nowT)?rgba(e.color,.5):e.color}" data-act="evEdit" data-id="${e.id}">
+  const cards=list.map(e=>e.go?goCard(Object.assign({},e,{color:cmap[e.id]||e.color}),nowT):`<div class="evCard${isLight(e.color)?' lt':''}" style="--c:${isExpired(e,nowT)?rgba(e.color,.5):e.color}" data-act="evEdit" data-id="${e.id}">
       ${e.photo?`<div class="evPh"${G?' data-act="boss"':''}><img src="${e.photo}" alt=""></div>`:''}
       <div class="evTx">${evLines(e)}</div>
     </div>`).join('')||'<div class="empty">這個月沒有活動</div>';
@@ -1181,7 +1183,7 @@ async function goSync(force){
       GO.events=goNorm(ev);
       if(ra)GO.raids=goNormRaids(ra);
       GO.t=Date.now();
-      GO.msg='資料來源：LeekDuck、Snack Nap（pokemon-go-api）　更新於 '+new Date(GO.t).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      GO.msg='資料來源：LeekDuck、Snack Nap（pokemon-go-api）\n更新於 '+new Date(GO.t).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
       if(IDB.db){try{await IDB.put({v:1,t:GO.t,events:GO.events,raids:GO.raids},'goData')}catch(e){}}
     }catch(e){GO.msg=GO.t?'無法更新，顯示上次的資料':'無法取得活動資料（網路或資料來源問題）'}
     GO.busy=null;goRefresh();
@@ -1341,7 +1343,8 @@ function maxBosses(soon){
 }
 const B_TEAM=[['1','一星','#5aa9e6'],['3','三星','#e8a33d'],['5','五星','#d9548a'],['n','一般','#6f8f6a'],['m','Mega','#c0594f'],['s','暗影','#5b4b8a']];
 const B_MAX=[['1','一星','#5aa9e6'],['2','二星','#4fb3a2'],['3','三星','#e8a33d'],['4','四星','#d9774a'],['d','極巨','#c0405a'],['g','超極巨','#7a4fc0']];
-function raidStar(b){const m=String(b.tier).match(/[1-6]/);return m?m[0]:''}
+function raidStar(b){const m=String(b.tier).match(/[1-6]/);return m?m[0]:(isMega(b)?'5':'')}
+function kindRank(b){return isShadow(b)?2:(isMega(b)?1:0)}
 function isShadow(b){return /shadow/i.test(b.name)||/shadow/i.test(b.tier)}
 function isMega(b){return /mega/i.test(b.tier)||/^(mega|primal)\s/i.test(b.name)}
 function isGmax(b){return b.star>=6||/gigantamax|eternamax/i.test(b.tier+' '+b.name)}
@@ -1362,7 +1365,7 @@ function bossPass(b){
 function renderBoss(root,p,keep){
   p=p||PAGES.find(x=>x.id==='boss');
   const isMax=UI.bossMode==='max';
-  const raid=GO.raids.filter(b=>!b.max&&bossPass(b));
+  const raid=GO.raids.filter(b=>!b.max&&bossPass(b)).sort((a,b)=>(+raidStar(b)-+raidStar(a))||(kindRank(a)-kindRank(b)));
   const mx=GO.raids.filter(b=>b.max).concat(GO.pgaMax&&GO.pgaMax.length?GO.pgaMax.map(fillMax).sort((x,y)=>(y.star||0)-(x.star||0)):maxBosses()).filter(bossPass);
   const soon=maxBosses(true).filter(bossPass);
   const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
