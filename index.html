@@ -1371,7 +1371,7 @@ function renderBoss(root,p,keep){
   const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
   let body;
   if(!isMax)body=raid.length?sec('',raid,0):`<div class="empty">${GO.busy?'載入中…':(GO.raids.length?'沒有符合的 Boss':'目前沒有 Boss 資料')}</div>`;
-  else body=(mx.length||soon.length)?sec('現在的極巨 Boss',mx,0)+sec('即將登場（極巨活動）',soon,mx.length):`<div class="empty">${GO.busy?'載入中…':((UI.bStars.length||UI.bKinds.length)?'沒有符合的 Boss':'目前沒有極巨 Boss 資料')}</div>`;
+  else body=(mx.length||soon.length)?sec('現在的極巨 Boss',mx,0)+sec('即將登場',soon,mx.length):`<div class="empty">${GO.busy?'載入中…':((UI.bStars.length||UI.bKinds.length)?'沒有符合的 Boss':'目前沒有極巨 Boss 資料')}</div>`;
   const filtering=UI.bStars.length||UI.bKinds.length;
   const chips=(isMax?B_MAX:B_TEAM).map(c=>{const on=UI.bStars.includes(c[0])||UI.bKinds.includes(c[0]);return `<button class="chip bt${on?' sel':''}" style="background:${c[2]}" data-act="bChip" data-k="${c[0]}"><span>${c[1]}</span></button>`}).join('');
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2>${segSelect('bossSel','戰鬥類型',UI.bossMode,[['team','團體戰'],['max','極巨戰']])}</div>
