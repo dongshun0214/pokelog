@@ -1258,7 +1258,9 @@ function evRerender(){
 function goCard(e,nowT){
   const ex=isExpired(e,nowT),c=ex?rgba(e.color,.5):e.color;
   let ph=e.mons.filter(m=>m.image).map(m=>`<div class="evPh"><img src="${esc(m.image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`).join('');
-  if(!ph){ph=titleMonImgs(e).map(im=>`<div class="evPh"><img src="${im}" alt=""></div>`).join('')}
+  {const dn=e.mons.filter(m=>m.image).length,tm=titleMons(e),im=titleMonImgs(e);
+   // 標題提到的寶可夢比資料給的多時（例如焦點時光只給一隻），改用標題找到的全部
+   if((!ph||tm.length>dn)&&im.length)ph=im.map(x=>`<div class="evPh"><img src="${x}" alt=""></div>`).join('')}
   const tag=GO_TYPE_ZH[e.type]||e.heading||'';
   return `<div class="evCard go${isLight(e.color)?' lt':''}" style="--c:${c}" data-act="goOpen" data-id="${esc(e.id)}">
     ${ph?`<div class="goPh">${ph}</div>`:''}
