@@ -215,8 +215,8 @@ body:not([data-page="home"]) #page{display:flex}
 .tnone{color:#8d93a8;padding:0 4px}
 
 /* ---------- GO 活動 / Boss ---------- */
-.evCard.go{align-items:flex-start;flex-wrap:wrap}
-.evCard .goPh{display:flex;gap:4px;flex:none;max-width:104px;flex-wrap:wrap}
+.evCard.go,.evCard.pm{flex-direction:column;align-items:flex-start;gap:8px}
+.evCard .goPh{display:flex;gap:6px;flex:none;flex-wrap:wrap}
 .evCard .goPh .evPh{width:46px;height:46px;background:rgba(255,255,255,.35);border-radius:10px}
 .evCard .goTag{display:inline-block;font-size:11px;font-weight:700;background:rgba(0,0,0,.22);color:#fff;border-radius:8px;padding:2px 6px;margin-bottom:3px;text-shadow:none}
 .evCard.lt .goTag{background:rgba(0,0,0,.12);color:#4a4020}
@@ -875,8 +875,8 @@ function renderCalendar(root,p){
     grid+=`<div class="wkRow">${cells}${bars}</div>`;
   }
   const nowT=Date.now();
-  const cards=list.map(e=>e.go?goCard(Object.assign({},e,{color:cmap[e.id]||e.color}),nowT):`<div class="evCard${isLight(e.color)?' lt':''}" style="--c:${isExpired(e,nowT)?rgba(e.color,.5):e.color}" data-act="evEdit" data-id="${e.id}">
-      ${evPhotos(e).length>1?`<div class="goPh">${evPhotos(e).map(p=>`<div class="evPh"><img src="${p}" alt=""></div>`).join('')}</div>`:(evPhotos(e).length?`<div class="evPh"><img src="${evPhotos(e)[0]}" alt=""></div>`:'')}
+  const cards=list.map(e=>e.go?goCard(Object.assign({},e,{color:cmap[e.id]||e.color}),nowT):`<div class="evCard${evPhotos(e).length?' pm':''}${isLight(e.color)?' lt':''}" style="--c:${isExpired(e,nowT)?rgba(e.color,.5):e.color}" data-act="evEdit" data-id="${e.id}">
+      ${evPhotos(e).length?`<div class="goPh">${evPhotos(e).map(p=>`<div class="evPh"><img src="${p}" alt=""></div>`).join('')}</div>`:''}
       <div class="evTx">${evLines(e)}</div>
     </div>`).join('')||'<div class="empty">這個月沒有活動</div>';
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2><button class="addBtn rk" data-act="evAdd" aria-label="新增活動"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>${segSelect('evSel','活動顯示',UI.evView,[['follow','關注活動'],['all','所有活動']])}</div>
