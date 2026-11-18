@@ -255,6 +255,11 @@ body:not([data-page="home"]) #page{display:flex}
 .chk input{width:22px;height:22px}
 .photoPick{display:flex;align-items:center;gap:12px;margin-bottom:12px}
 .photoPick .pv{width:72px;height:72px;border-radius:12px;background:#eef1fa;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#98a0b8;font-size:12px}
+.mlist{display:flex;gap:8px;flex-wrap:wrap;flex:1;min-height:72px;align-items:center}
+.mth{position:relative;width:60px;height:60px;border-radius:12px;background:#eef1fa;display:flex;align-items:center;justify-content:center;font-size:11px;text-align:center;color:#3a3f5c}
+.mth img{width:100%;height:100%;object-fit:contain;border-radius:12px}
+.mth b{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#4a4f6e;color:#fff;font-size:13px;line-height:20px;text-align:center;font-weight:700}
+.pbtns{display:flex;flex-direction:column;gap:6px}
 .photoPick .pv img{width:100%;height:100%;object-fit:contain}
 .btn{border:0;border-radius:12px;padding:12px 16px;font-size:16px;font-weight:700;background:#e9edf8;color:#1f2340}
 .btn.main{background:#5b6bd6;color:#fff}
@@ -871,7 +876,7 @@ function renderCalendar(root,p){
   }
   const nowT=Date.now();
   const cards=list.map(e=>e.go?goCard(Object.assign({},e,{color:cmap[e.id]||e.color}),nowT):`<div class="evCard${isLight(e.color)?' lt':''}" style="--c:${isExpired(e,nowT)?rgba(e.color,.5):e.color}" data-act="evEdit" data-id="${e.id}">
-      ${e.photo?`<div class="evPh"${G?' data-act="boss"':''}><img src="${e.photo}" alt=""></div>`:''}
+      ${evPhotos(e).length>1?`<div class="goPh">${evPhotos(e).map(p=>`<div class="evPh"><img src="${p}" alt=""></div>`).join('')}</div>`:(evPhotos(e).length?`<div class="evPh"><img src="${evPhotos(e)[0]}" alt=""></div>`:'')}
       <div class="evTx">${evLines(e)}</div>
     </div>`).join('')||'<div class="empty">這個月沒有活動</div>';
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2><button class="addBtn rk" data-act="evAdd" aria-label="新增活動"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>${segSelect('evSel','活動顯示',UI.evView,[['follow','關注活動'],['all','所有活動']])}</div>
@@ -882,10 +887,14 @@ function renderCalendar(root,p){
     <div class="list evCards">${cards}${G?'<div class="syncMsg" id="goMsg">'+esc(GO.msg)+'</div>':''}</div>`;
   if(G){goSync(false);if(!PK.list)pkLoad().then(()=>evRerender()).catch(()=>{})}
 }
+const evPhotos=e=>Array.isArray(e.photos)&&e.photos.length?e.photos:(e.photo?[e.photo]:[]);
 function openEvent(id){
   const old=id?DB.events.find(x=>x.id===id):null;
   const d=old||{start:todayStr(),end:todayStr(),sTime:'',eTime:'',text:'',mon:'',photo:'',color:EV_COLORS[DB.events.length%EV_COLORS.length]};
-  let photo=d.photo||'',color=d.color;
+  let color=d.color;
+  let mons=Array.isArray(d.photos)&&d.photos.length?d.photos.map((p,i)=>({name:(d.monNames&&d.monNames[i])||'',photo:p})):(d.photo?[{name:d.mon||'',photo:d.photo}]:[]);
+  if(d.monNames)String(d.mon||'').split('、').filter(n=>n&&!d.monNames.includes(n)).forEach(n=>mons.push({name:n,photo:''}));
+  else if(!mons.length&&d.mon)mons.push({name:d.mon,photo:''});
   const sw=EV_COLORS.map(c=>`<button type="button" class="swb${c===color?' on':''}" data-c="${c}" style="background:${c}" aria-label="顏色"></button>`).join('');
   const s=openSheet(`
     <h3>${old?'編輯活動':'新增活動'}</h3>
@@ -898,27 +907,31 @@ function openEvent(id){
       <label class="f"><span>結束時間（可不填）</span><input id="eET" type="time" value="${esc(d.eTime)}"></label>
     </div>
     <label class="f"><span>活動內容</span><input id="eT" value="${esc(d.text)}" autocomplete="off"></label>
-    <div class="f"><span>主題寶可夢（可不填，可搜尋）</span><input id="eM" value="${esc(d.mon)}" autocomplete="off"><div id="pkRes" class="pkRes"></div><div id="pkSt" class="pkSt"></div></div>
-    <div class="photoPick"><div class="pv" id="pv">${photo?`<img src="${photo}" alt="">`:'無照片'}</div>
-      <button class="btn" id="pickBtn" type="button">選擇照片</button><button class="btn" id="clrBtn" type="button">移除</button><input type="file" id="photoIn" accept="image/*" hidden></div>
+    <div class="f"><span>主題寶可夢（可不填，可搜尋，可加多隻）</span><input id="eM" value="" autocomplete="off"><div id="pkRes" class="pkRes"></div><div id="pkSt" class="pkSt"></div></div>
+    <div class="photoPick"><div class="mlist" id="mList"></div>
+      <div class="pbtns"><button class="btn" id="pickBtn" type="button">新增照片</button><button class="btn" id="clrBtn" type="button">清空</button></div><input type="file" id="photoIn" accept="image/*" hidden></div>
     <div class="f"><span>活動顏色</span><div class="sws" id="sws">${sw}</div></div>
     <div class="btns">${old?'<button class="btn del" id="delBtn">刪除</button>':''}<button class="btn" id="cancelBtn">取消</button><button class="btn main" id="saveBtn">儲存</button></div>`);
   const q=x=>s.querySelector(x);
   q('#sws').onclick=e=>{const b=e.target.closest('.swb');if(!b)return;color=b.dataset.c;s.querySelectorAll('.swb').forEach(x=>x.classList.toggle('on',x===b))};
+  const drawM=()=>{q('#mList').innerHTML=mons.length?mons.map((m,i)=>`<div class="mth">${m.photo?`<img src="${m.photo}" alt="">`:`<span>${esc(m.name)}</span>`}<b data-i="${i}">×</b></div>`).join(''):'<span style="color:#8a90ab;font-size:13px">無照片</span>'};
+  drawM();
+  q('#mList').onclick=e=>{const b=e.target.closest('b[data-i]');if(!b)return;mons.splice(+b.dataset.i,1);drawM()};
   attachPicker(q('#eM'),q('#pkRes'),async en=>{
-    const st=q('#pkSt');st.textContent='載入「'+(en.zh||en.en)+'」中…';
-    q('#eM').value=en.zh||en.en;
+    const st=q('#pkSt'),nm=en.zh||en.en;st.textContent='載入「'+nm+'」中…';
+    q('#eM').value='';
     try{
       const info=await pkInfo(en.id);
-      if(info.photo){photo=info.photo;q('#pv').innerHTML=`<img src="${photo}" alt="">`;st.textContent='已自動填入照片'}
-      else st.textContent='照片抓取失敗，請手動選擇';
-    }catch(err){st.textContent='照片抓取失敗（需要網路），名字已填入'}
+      if(info.photo){mons.push({name:nm,photo:info.photo});drawM();st.textContent='已加入「'+nm+'」'}
+      else{mons.push({name:nm,photo:''});drawM();st.textContent='照片抓取失敗，可再手動新增照片'}
+    }catch(err){mons.push({name:nm,photo:''});drawM();st.textContent='照片抓取失敗（需要網路），名字已加入'}
   });
   q('#pickBtn').onclick=()=>q('#photoIn').click();
-  q('#clrBtn').onclick=()=>{photo='';q('#pv').textContent='無照片'};
+  q('#clrBtn').onclick=()=>{mons=[];drawM()};
   q('#photoIn').onchange=async e=>{
     const f=e.target.files[0];if(!f)return;
-    try{photo=await readImage(f);q('#pv').innerHTML=`<img src="${photo}" alt="">`}catch(err){alert('照片讀取失敗')}
+    try{mons.push({name:q('#eM').value.trim(),photo:await readImage(f)});q('#eM').value='';drawM()}catch(err){alert('照片讀取失敗')}
+    e.target.value='';
   };
   q('#eS').onchange=()=>{if(!q('#eE').value||q('#eE').value<q('#eS').value)q('#eE').value=q('#eS').value};
   q('#cancelBtn').onclick=closeSheet;
@@ -927,7 +940,9 @@ function openEvent(id){
     const st=q('#eS').value,en=q('#eE').value||st;
     if(!st){alert('請選開始日期');return}
     if(en<st){alert('結束日期不能早於開始日期');return}
-    const rec={id:old?old.id:uid(),start:st,end:en,sTime:q('#eST').value,eTime:q('#eET').value,text:q('#eT').value.trim(),mon:q('#eM').value.trim(),photo,color};
+    const typed=q('#eM').value.trim();if(typed)mons.push({name:typed,photo:''});
+    const photos=mons.map(m=>m.photo).filter(Boolean);
+    const rec={id:old?old.id:uid(),start:st,end:en,sTime:q('#eST').value,eTime:q('#eET').value,text:q('#eT').value.trim(),mon:mons.map(m=>m.name).filter(Boolean).join('、'),photo:photos[0]||'',photos,monNames:mons.filter(m=>m.photo).map(m=>m.name),color};
     if(old)DB.events[DB.events.findIndex(x=>x.id===old.id)]=rec;else DB.events.push(rec);
     const a=st.split('-').map(Number);CAL.y=a[0];CAL.m=a[1]-1;
     save();closeSheet();renderCalendar($('#page'));
@@ -1197,20 +1212,43 @@ function goRefresh(){
   else if(p.id==='events'&&UI.evView==='all'){const m=$('#goMsg');if(m)m.textContent=GO.msg;if(GO._n!==GO.events.length+':'+GO.t){GO._n=GO.events.length+':'+GO.t;const l=$('#page .list');const st=l?l.scrollTop:0;renderCalendar($('#page'),p);const l2=$('#page .list');if(l2)l2.scrollTop=st}}
 }
 // 活動資料沒給寶可夢時，從標題找出提到的寶可夢（用 PokeAPI 名單比對），圖片用 PokeAPI 的官方圖
-function titleMon(e){
-  if(e._tm!==undefined)return e._tm;
-  if(!PK.list)return null;
+function titleMons(e){
+  if(e._tms!==undefined)return e._tms;
+  if(!PK.list)return [];
   if(!PK.byLen)PK.byLen=PK.list.filter(x=>x.id<10000&&x.en&&x.en.length>=3).sort((a,b)=>b.en.length-a.en.length);
   const t=' '+String(e.text).toLowerCase().replace(/[^a-z0-9.\u2019' -]/g,' ')+' ';
-  const hit=PK.byLen.find(x=>t.includes(' '+x.en.toLowerCase()+' ')||t.includes(' '+x.en.toLowerCase()+"'s "));
-  e._tm=hit?{id:hit.id,name:hit.en}:null;
-  return e._tm;
+  const taken=[],found=[];
+  PK.byLen.forEach(x=>{
+    const n=x.en.toLowerCase();let at=t.indexOf(' '+n+' ');
+    if(at<0)at=t.indexOf(' '+n+"'s ");
+    if(at<0)return;
+    const from=at+1,to=from+n.length;
+    if(taken.some(r=>from<r[1]&&to>r[0]))return;
+    taken.push([from,to]);found.push({at:from,id:x.id,en:x.en});
+  });
+  found.sort((a,b)=>a.at-b.at);
+  const mega=/\bmega\b/.test(t);
+  const out=[];
+  found.slice(0,6).forEach(f=>{
+    if(mega){
+      const forms=PK.list.filter(x=>x.id>=10000&&x.en&&(x.en==='Mega '+f.en||x.en.indexOf('Mega '+f.en+' ')===0));
+      if(forms.length){
+        const pick=forms.filter(x=>{const m=x.en.match(/ ([XY])$/);return m&&new RegExp('\\b'+m[1].toLowerCase()+'\\b').test(t)});
+        (pick.length?pick:forms.slice(0,1)).forEach(x=>out.push({id:x.id,name:x.en}));
+        return;
+      }
+    }
+    out.push({id:f.id,name:f.en});
+  });
+  e._tms=out;
+  return out;
 }
-function titleMonImg(e){
-  const m=titleMon(e);if(!m)return '';
-  const info=MAXT[m.id];
-  if(!info&&!MAXT['p'+m.id]){MAXT['p'+m.id]=1;pkInfo(m.id).then(i=>{MAXT[m.id]=i;evRerender()}).catch(()=>{})}
-  return info?info.photo:'';
+function titleMonImgs(e){
+  return titleMons(e).map(m=>{
+    const info=MAXT[m.id];
+    if(!info&&!MAXT['p'+m.id]){MAXT['p'+m.id]=1;pkInfo(m.id).then(i=>{MAXT[m.id]=i;evRerender()}).catch(()=>{})}
+    return info?info.photo:'';
+  }).filter(Boolean);
 }
 function evRerender(){
   if(current!=='events'||UI.evView!=='all')return;
@@ -1220,7 +1258,7 @@ function evRerender(){
 function goCard(e,nowT){
   const ex=isExpired(e,nowT),c=ex?rgba(e.color,.5):e.color;
   let ph=e.mons.filter(m=>m.image).map(m=>`<div class="evPh"><img src="${esc(m.image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`).join('');
-  if(!ph){const im=titleMonImg(e);if(im)ph=`<div class="evPh"><img src="${im}" alt=""></div>`}
+  if(!ph){ph=titleMonImgs(e).map(im=>`<div class="evPh"><img src="${im}" alt=""></div>`).join('')}
   const tag=GO_TYPE_ZH[e.type]||e.heading||'';
   return `<div class="evCard go${isLight(e.color)?' lt':''}" style="--c:${c}" data-act="goOpen" data-id="${esc(e.id)}">
     ${ph?`<div class="goPh">${ph}</div>`:''}
