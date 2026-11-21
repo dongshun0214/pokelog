@@ -1111,9 +1111,13 @@ function snackMax(j){
   const out=[],num=v=>{v=+v;return isFinite(v)&&v>0?v:null};
   ((j&&j.items)||[]).forEach(x=>{
     if(!x||!x.name)return;
-    const star=+x.tier||0,g=star>=6;
+    const star=+x.tier||0;
     let nm=String(x.name).trim();
-    if(g&&!/^(gigantamax|eternamax)/i.test(nm))nm='Gigantamax '+nm;
+    // Snack Nap 的名字長這樣：D-Max Moltres / G-Max Duraludon / D-Max Toxtricity (Amped)
+    let g=star>=6;
+    if(/^g-max\s/i.test(nm)){g=true;nm='Gigantamax '+nm.replace(/^g-max\s+/i,'')}
+    else if(/^d-max\s/i.test(nm))nm='Dynamax '+nm.replace(/^d-max\s+/i,'');
+    else if(g&&!/^(gigantamax|eternamax)/i.test(nm))nm='Gigantamax '+nm;
     out.push({name:nm,zh:'',star,tier:g?'Gigantamax Battle':'Dynamax Battle',max:true,shiny:false,types:[],image:'',cpMin:num(x.cp_min),cpMax:num(x.cp_max),bMin:null,bMax:null,weather:[]});
   });
   return out;
@@ -1305,10 +1309,12 @@ function bossZh(name){
   }
   let suf='';
   const m=n.match(/^(.*?)\s+([XY])$/i);if(m){n=m[1];suf=' '+m[2].toUpperCase()}
+  const pm=n.match(/\(([^)]*)\)\s*$/);
   n=n.replace(/\s*\(.*\)\s*$/,'');
   const nk=x=>String(x).toLowerCase().replace(/[^a-z0-9]/g,'');
   const hit=PK.list.find(e=>e.en&&nk(e.en)===nk(n));
-  return hit&&hit.zh?pre+hit.zh+suf:name;
+  const FZ={'Amped':'高調','Low Key':'低調','Incarnate Forme':'化身','Therian Forme':'靈獸'};
+  return hit&&hit.zh?pre+hit.zh+suf+(pm?' ('+(FZ[pm[1]]||pm[1])+')':''):name;
 }
 // 依防守屬性算每個攻擊屬性的倍率（GO：效果絕佳 1.6，雙弱 2.56；抵抗 0.625、雙抵抗 0.391）
 function effectiveness(types){
@@ -1422,12 +1428,16 @@ function renderBoss(root,p,keep){
   p=p||PAGES.find(x=>x.id==='boss');
   const isMax=UI.bossMode==='max';
   const raid=GO.raids.filter(b=>!b.max&&bossPass(b)).sort((a,b)=>(+raidStar(b)-+raidStar(a))||(kindRank(a)-kindRank(b)));
-  const mx=GO.raids.filter(b=>b.max).concat(GO.pgaMax&&GO.pgaMax.length?GO.pgaMax.map(fillMax).sort((x,y)=>(y.star||0)-(x.star||0)):maxBosses()).filter(bossPass);
-  const soon=maxBosses(true).filter(bossPass);
+  // 進行中 = 資料來源的極巨 Boss + 已開始的極巨活動標題（兩邊同一隻只留資料來源那張）
+  const mkey=b=>nk(String(b.name).replace(/^(gigantamax|dynamax|eternamax)\s+/i,'').replace(/\s*\(.*\)\s*$/,''))+(isGmax(b)?'g':'d');
+  const seen={},mxAll=[];
+  GO.raids.filter(b=>b.max).concat(GO.pgaMax?GO.pgaMax.map(fillMax).sort((x,y)=>(y.star||0)-(x.star||0)):[],maxBosses(false)).forEach(b=>{const k=mkey(b);if(seen[k])return;seen[k]=1;mxAll.push(b)});
+  const mx=mxAll.filter(bossPass);
+  const soon=maxBosses(true).filter(b=>!seen[mkey(b)]).filter(bossPass);
   const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
   let body;
   if(!isMax)body=raid.length?sec('',raid,0):`<div class="empty">${GO.busy?'載入中…':(GO.raids.length?'沒有符合的 Boss':'目前沒有 Boss 資料')}</div>`;
-  else body=(mx.length||soon.length)?sec('現在的極巨 Boss',mx,0)+sec('即將登場',soon,mx.length):`<div class="empty">${GO.busy?'載入中…':((UI.bStars.length||UI.bKinds.length)?'沒有符合的 Boss':'目前沒有極巨 Boss 資料')}</div>`;
+  else body=(mx.length||soon.length)?sec('進行中',mx,0)+sec('即將登場',soon,mx.length):`<div class="empty">${GO.busy?'載入中…':((UI.bStars.length||UI.bKinds.length)?'沒有符合的 Boss':'目前沒有極巨 Boss 資料')}</div>`;
   const filtering=UI.bStars.length||UI.bKinds.length;
   const chips=(isMax?B_MAX:B_TEAM).map(c=>{const on=UI.bStars.includes(c[0])||UI.bKinds.includes(c[0]);return `<button class="chip bt${on?' sel':''}" style="background:${c[2]}" data-act="bChip" data-k="${c[0]}"><span>${c[1]}</span></button>`}).join('');
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2>${segSelect('bossSel','戰鬥類型',UI.bossMode,[['team','團體戰'],['max','極巨戰']])}</div>
