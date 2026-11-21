@@ -1218,7 +1218,7 @@ async function goSync(force){
       GO.events=goNorm(ev);
       if(ra)GO.raids=goNormRaids(ra);
       GO.t=Date.now();
-      GO.msg='資料來源：LeekDuck、Snack Nap（pokemon-go-api）\n更新於 '+new Date(GO.t).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      GO.msg='資料來源：LeekDuck、Snack Nap（pokemon-go-api）\n更新於 '+new Date(GO.t).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+'（每小時更新Snack Nap資料）';
       if(IDB.db){try{await IDB.put({v:1,t:GO.t,events:GO.events,raids:GO.raids},'goData')}catch(e){}}
     }catch(e){GO.msg=GO.t?'無法更新，顯示上次的資料':'無法取得活動資料（網路或資料來源問題）'}
     GO.busy=null;goRefresh();
@@ -1404,7 +1404,7 @@ function maxBosses(soon){
   return out;
 }
 const B_TEAM=[['1','一星','#5aa9e6'],['3','三星','#e8a33d'],['5','五星','#d9548a'],['n','一般','#6f8f6a'],['m','Mega','#c0594f'],['s','暗影','#5b4b8a']];
-const B_MAX=[['1','一星','#5aa9e6'],['2','二星','#4fb3a2'],['3','三星','#e8a33d'],['4','四星','#d9774a'],['d','極巨','#c0405a'],['g','超極巨','#7a4fc0']];
+const B_MAX=[['1','一星','#5aa9e6'],['2','二星','#4fb3a2'],['3','三星','#e8a33d'],['4','四星','#d9774a'],['5','五星','#c0405a'],['6','六星','#7a4fc0']];
 function raidStar(b){const m=String(b.tier).match(/[1-6]/);return m?m[0]:(isMega(b)?'5':'')}
 function kindRank(b){return isShadow(b)?2:(isMega(b)?1:0)}
 function isShadow(b){return /shadow/i.test(b.name)||/shadow/i.test(b.tier)}
@@ -1429,11 +1429,13 @@ function renderBoss(root,p,keep){
   const isMax=UI.bossMode==='max';
   const raid=GO.raids.filter(b=>!b.max&&bossPass(b)).sort((a,b)=>(+raidStar(b)-+raidStar(a))||(kindRank(a)-kindRank(b)));
   // 進行中 = 資料來源的極巨 Boss + 已開始的極巨活動標題（兩邊同一隻只留資料來源那張）
-  const mkey=b=>nk(String(b.name).replace(/^(gigantamax|dynamax|eternamax)\s+/i,'').replace(/\s*\(.*\)\s*$/,''))+(isGmax(b)?'g':'d');
+  const mkey=b=>nk(String(b.name).replace(/^(gigantamax|dynamax|eternamax)\s+/i,''))+(isGmax(b)?'g':'d');
   const seen={},mxAll=[];
-  GO.raids.filter(b=>b.max).concat(GO.pgaMax?GO.pgaMax.map(fillMax).sort((x,y)=>(y.star||0)-(x.star||0)):[],maxBosses(false)).forEach(b=>{const k=mkey(b);if(seen[k])return;seen[k]=1;mxAll.push(b)});
+  // 標題轉來的卡片沒有括弧形態，所以只要資料來源有任何同名形態（例如 Toxtricity (Amped)）就算重複
+  const dup=(b,k)=>seen[k]||(!b.star&&Object.keys(seen).some(x=>x.slice(-1)===k.slice(-1)&&x.indexOf(k.slice(0,-1))===0));
+  GO.raids.filter(b=>b.max).concat(GO.pgaMax?GO.pgaMax.map(fillMax).sort((x,y)=>(y.star||0)-(x.star||0)):[],maxBosses(false)).forEach(b=>{const k=mkey(b);if(dup(b,k))return;seen[k]=1;mxAll.push(b)});
   const mx=mxAll.filter(bossPass);
-  const soon=maxBosses(true).filter(b=>!seen[mkey(b)]).filter(bossPass);
+  const soon=(UI.bStars.length||UI.bKinds.length)?[]:maxBosses(true).filter(b=>!dup(b,mkey(b)));
   const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
   let body;
   if(!isMax)body=raid.length?sec('',raid,0):`<div class="empty">${GO.busy?'載入中…':(GO.raids.length?'沒有符合的 Boss':'目前沒有 Boss 資料')}</div>`;
