@@ -1353,6 +1353,11 @@ function playersGuess(b){
   return '依實力而定';
 }
 const tpills=ks=>ks.map(k=>`<span class="tp" style="background:${TMAP[k].c}">${TMAP[k].n}</span>`).join('');
+// 坦克：能抵抗這隻 Boss 屬性（招式）的防守屬性；雙屬性 Boss 兩個都抵抗的排前面（×2）
+function tankTypes(bt){
+  if(!bt.length)return [];
+  return TYPES.map(d=>{let m=1;bt.forEach(t=>{if((T_RESIST[d.k]||[]).includes(t))m*=0.625});return [d.k,m]}).filter(x=>x[1]<1).sort((a,c)=>a[1]-c[1]);
+}
 function bossCard(b,i){
   const col=b.types.length?TMAP[b.types[0]].c:'#6b7390';
   const eff=effectiveness(b.types);
@@ -1369,7 +1374,8 @@ function bossCard(b,i){
     <div class="bDet">
       ${b.cpMax?`<div class="r"><b>CP 範圍</b><div>${rng(b.cpMin,b.cpMax)}</div></div>`:''}
       ${b.bMax?`<div class="r"><b>天氣加成</b><div>${rng(b.bMin,b.bMax)}${wx?'（'+esc(wx)+'）':''}</div></div>`:(wx?`<div class="r"><b>加成天氣</b><div>${esc(wx)}</div></div>`:'')}
-      <div class="r"><b>用什麼打</b><div>${best.length?best.map(x=>`<span class="tp" style="background:${TMAP[x[0]].c}">${TMAP[x[0]].n}${x[1]>2?' ×2':''}</span>`).join(''):'—'}</div></div>
+      <div class="r"><b>${b.max?'打手':'用什麼打'}</b><div>${best.length?best.map(x=>`<span class="tp" style="background:${TMAP[x[0]].c}">${TMAP[x[0]].n}${x[1]>2?' ×2':''}</span>`).join(''):'—'}</div></div>
+      ${b.max?`<div class="r"><b>坦克</b><div>${tankTypes(b.types).map(x=>`<span class="tp" style="background:${TMAP[x[0]].c}">${TMAP[x[0]].n}${x[1]<0.5?' ×2':''}</span>`).join('')||'—'}</div></div>`:''}
     </div>
   </div>`;
 }
