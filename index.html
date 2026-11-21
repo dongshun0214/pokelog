@@ -1552,16 +1552,21 @@ function openBackup(){
   const s=openSheet(`
     <h3>雲朵備份</h3>
     <p class="note">目前資料：團體戰 ${DB.team.length} 筆、極巨戰 ${DB.max.length} 筆、活動 ${DB.events.length} 筆。<br>資料存在這支手機的瀏覽器裡，換手機或清除網站資料前，請先匯出備份。</p>
-    <div class="btns"><button class="btn main" id="exBtn">匯出備份</button><button class="btn" id="imBtn">匯入備份</button></div>
+    <div class="btns"><button class="btn main" id="exBtn">匯出全部備份</button><button class="btn" id="imBtn">匯入備份</button></div>
+    <div class="btns"><button class="btn" id="exRkBtn">只匯出排名（不含「我有這隻」）</button></div>
+    <p class="note">排名備份只含團體戰、極巨戰的排名資料，不含「我有這隻」和其他頁面。匯入時會自動辨認是全部備份還是排名備份。</p>
     <div class="btns"><button class="btn" id="bClose">關閉</button></div>`);
-  s.querySelector('#exBtn').onclick=exportData;
+  s.querySelector('#exBtn').onclick=()=>exportData();
+  s.querySelector('#exRkBtn').onclick=()=>exportData('rank');
   s.querySelector('#imBtn').onclick=()=>$('#importFile').click();
   s.querySelector('#bClose').onclick=closeSheet;
 }
-async function exportData(){
-  const text=JSON.stringify({app:'PokeLog',version:1,exportedAt:new Date().toISOString(),data:DB});
+async function exportData(kind){
+  const strip=a=>a.map(x=>Object.assign({},x,{owned:false,hp:'',atk:'',def:''}));
+  const rank=kind==='rank';
+  const text=JSON.stringify(rank?{app:'PokeLog',kind:'rank',version:1,exportedAt:new Date().toISOString(),data:{team:strip(DB.team),max:strip(DB.max)}}:{app:'PokeLog',version:1,exportedAt:new Date().toISOString(),data:DB});
   const blob=new Blob([text],{type:'application/json'});
-  const name='PokeLog-backup-'+todayStr()+'.json';
+  const name='PokeLog-'+(rank?'rank-':'backup-')+todayStr()+'.json';
   try{
     const file=new File([blob],name,{type:'application/json'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'PokeLog 備份'});return}
@@ -1578,6 +1583,16 @@ $('#importFile').addEventListener('change',e=>{
       const j=JSON.parse(fr.result);
       const d=j&&j.data?j.data:j;
       if(!d||!Array.isArray(d.team))throw new Error('format');
+      if(j.kind==='rank'){
+        if(!confirm('這是排名備份（團體戰 '+d.team.length+' 筆、極巨戰 '+(Array.isArray(d.max)?d.max.length:0)+' 筆）。\n匯入會取代目前的排名資料，活動不受影響；「我有這隻」不會匯入，但這支手機上同一隻原本填的會保留。確定嗎？'))return;
+        const keep=a=>{const m={};a.forEach(x=>{m[x.id]=x});return m};
+        const ot=keep(DB.team),om=keep(DB.max);
+        const mix=(arr,old)=>arr.map(x=>{const o=old[x.id];return o&&o.owned?Object.assign({},x,{owned:true,hp:o.hp,atk:o.atk,def:o.def}):Object.assign({},x,{owned:false,hp:'',atk:'',def:''})});
+        DB={team:mix(d.team,ot),max:mix(Array.isArray(d.max)?d.max:[],om),events:DB.events};
+        save();closeSheet();
+        if(current!=='home'){const p=PAGES.find(x=>x.id===current);p.render($('#page'),p)}
+        alert('排名匯入完成');return;
+      }
       if(!confirm('匯入會取代目前的資料（團體戰 '+d.team.length+' 筆），確定嗎？'))return;
       DB={team:d.team,max:Array.isArray(d.max)?d.max:[],events:Array.isArray(d.events)?d.events:[]};
       save();closeSheet();
