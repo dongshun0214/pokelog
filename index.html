@@ -1105,6 +1105,19 @@ function openOwn(id){
 const GO_SRC=n=>['https://raw.githubusercontent.com/bigfoott/ScrapedDuck/data/'+n+'.min.json','https://raw.githubusercontent.com/bigfoott/ScrapedDuck/data/'+n+'.json','https://cdn.jsdelivr.net/gh/bigfoott/ScrapedDuck@data/'+n+'.min.json','https://cdn.jsdelivr.net/gh/bigfoott/ScrapedDuck@data/'+n+'.json'];
 const GO={events:[],raids:[],t:0,msg:'',busy:null,dbg:''};
 const PGA=['https://pokemon-go-api.github.io/pokemon-go-api/api/maxbattles.json'];
+const LOCAL=['data/maxbattles.json'];
+// 自己的 data/maxbattles.json：由 GitHub Actions 定時爬 Snack Nap 產生 {items:[{tier,name,cp_min,cp_max}]}
+function snackMax(j){
+  const out=[],num=v=>{v=+v;return isFinite(v)&&v>0?v:null};
+  ((j&&j.items)||[]).forEach(x=>{
+    if(!x||!x.name)return;
+    const star=+x.tier||0,g=star>=6;
+    let nm=String(x.name).trim();
+    if(g&&!/^(gigantamax|eternamax)/i.test(nm))nm='Gigantamax '+nm;
+    out.push({name:nm,zh:'',star,tier:g?'Gigantamax Battle':'Dynamax Battle',max:true,shiny:false,types:[],image:'',cpMin:num(x.cp_min),cpMax:num(x.cp_max),bMin:null,bMax:null,weather:[]});
+  });
+  return out;
+}
 const LILY=['https://mknepprath.github.io/lily-dex-api/maxbattles.json'];
 // pokemon-go-api 的 maxbattles.json：{currentList:{tier_1:[...],...,tier_6:[...]}}（每筆欄位我沒驗證過，所以每個欄位都寬鬆讀取）
 function pgaMax(j){
@@ -1183,15 +1196,18 @@ async function goSync(force){
   GO.msg='更新活動資料中…';goRefresh();
   GO.busy=(async()=>{
     try{
-      const [ev,ra,pg,ly]=await Promise.all([fetchAny(GO_SRC('events'),'json'),fetchAny(GO_SRC('raids'),'json').catch(()=>null),fetchAny(PGA,'json').catch(()=>null),fetchAny(LILY,'json').catch(()=>null)]);
+      const [ev,ra,pg,ly,lc]=await Promise.all([fetchAny(GO_SRC('events'),'json'),fetchAny(GO_SRC('raids'),'json').catch(()=>null),fetchAny(PGA,'json').catch(()=>null),fetchAny(LILY,'json').catch(()=>null),fetchAny(LOCAL.map(u=>u+'?t='+Math.floor(Date.now()/60000)),'json').catch(()=>null)]);
       GO.pgaMax=pg?pgaMax(pg):[];
       const lyMax=ly?pgaMax(ly):[];
       if(!GO.pgaMax.length)GO.pgaMax=lyMax;
+      const lcMax=lc?snackMax(lc):[];
+      if(lcMax.length)GO.pgaMax=lcMax;
       GO.dbg=[
         'raids 階級：'+[...new Set((ra||[]).map(r=>r&&r.tier))].join(' | '),
         'events 類型：'+[...new Set((ev||[]).map(e=>e&&e.eventType))].join(' | '),
         '名稱含 max 的活動：'+(ev||[]).filter(e=>/max|dynamax|gigantamax/i.test((e.name||'')+(e.eventType||''))).map(e=>e.name+' ['+e.eventType+'] extra:'+Object.keys(e.extraData||{}).join(',')).join(' ; '),
         'maxbattles.json：'+(pg?('筆數 '+GO.pgaMax.length+'；原始內容 '+JSON.stringify(pg).slice(0,700)):'取不到（網路/CORS）'),
+        '本站 data/maxbattles.json：'+(lc?('筆數 '+lcMax.length+'；更新 '+(lc.updated||'?')):'取不到（尚未產生）'),
         'lily-dex-api：'+(ly?('筆數 '+lyMax.length+'；原始內容 '+JSON.stringify(ly).slice(0,700)):'取不到（網路/CORS）'),
         '極巨活動日期：'+(ev||[]).filter(e=>/dynamax|gigantamax|eternamax/i.test(e.name||'')).map(e=>e.name+' '+e.start+'~'+e.end).join(' ; ')
       ].join('\n');
