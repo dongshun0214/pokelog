@@ -415,7 +415,7 @@ const PAGES=[
  {id:'types',label:'屬性表',title:'屬性表',render:renderTypes}
 ];
 let current='home';
-const UI={mode:'team',filter:null,q:'',evView:'follow',bossMode:'team',bStars:[],bKinds:[]};
+const UI={mode:'team',filter:null,q:'',evView:'follow',bossMode:'team',bStars:[],bKinds:[],bq:''};
 
 function go(id){
   current=id;
@@ -424,6 +424,7 @@ function go(id){
   if(id==='home'){$('#page').innerHTML='';renderHome();return}
   const p=PAGES.find(x=>x.id===id);
   if(id==='rank'){UI.filter=null;UI.q=''}
+  if(id==='boss')UI.bq=''
   if(id==='types'){UI.tf=[];UI.tmon=null}
   p.render($('#page'),p);
   const l=$('#page .list');if(l)l.scrollTop=0;
@@ -967,6 +968,7 @@ $('#page').addEventListener('click',e=>{
   else if(a==='calPrev'||a==='calNext'){CAL.m+=a==='calNext'?1:-1;if(CAL.m<0){CAL.m=11;CAL.y--}if(CAL.m>11){CAL.m=0;CAL.y++}renderCalendar($('#page'))}
 });
 $('#page').addEventListener('input',e=>{
+  if(e.target.id==='bqIn'){UI.bq=e.target.value;const l=$('#page .list');if(l){l.innerHTML=bossListHtml();l.scrollTop=0}return}
   if(e.target.id!=='qIn')return;
   UI.q=e.target.value;
   const l=$('#page .list');if(l){l.innerHTML=UI.mode==='team'?teamBody():maxBody();l.scrollTop=0}
@@ -1416,7 +1418,9 @@ function kindRank(b){return isShadow(b)?2:(isMega(b)?1:0)}
 function isShadow(b){return /shadow/i.test(b.name)||/shadow/i.test(b.tier)}
 function isMega(b){return /mega/i.test(b.tier)||/^(mega|primal)\s/i.test(b.name)}
 function isGmax(b){return b.star>=6||/gigantamax|eternamax/i.test(b.tier+' '+b.name)}
+function bossQ(b){return !UI.bq||fuzzy(bossZh(b.name),UI.bq)||fuzzy(b.name,UI.bq)}
 function bossPass(b){
+  if(!bossQ(b))return false;
   const st=UI.bStars,kd=UI.bKinds;
   if(!st.length&&!kd.length)return true;
   if(st.length){
@@ -1430,8 +1434,7 @@ function bossPass(b){
   }
   return true;
 }
-function renderBoss(root,p,keep){
-  p=p||PAGES.find(x=>x.id==='boss');
+function bossListHtml(){
   const isMax=UI.bossMode==='max';
   const raid=GO.raids.filter(b=>!b.max&&bossPass(b)).sort((a,b)=>(+raidStar(b)-+raidStar(a))||(kindRank(a)-kindRank(b)));
   // 進行中 = 資料來源的極巨 Boss + 已開始的極巨活動標題（兩邊同一隻只留資料來源那張）
@@ -1441,16 +1444,22 @@ function renderBoss(root,p,keep){
   const dup=(b,k)=>seen[k]||(!b.star&&Object.keys(seen).some(x=>x.slice(-1)===k.slice(-1)&&x.indexOf(k.slice(0,-1))===0));
   GO.raids.filter(b=>b.max).concat(GO.pgaMax?GO.pgaMax.map(fillMax).sort((x,y)=>(y.star||0)-(x.star||0)):[],maxBosses(false)).forEach(b=>{const k=mkey(b);if(dup(b,k))return;seen[k]=1;mxAll.push(b)});
   const mx=mxAll.filter(bossPass);
-  const soon=(UI.bStars.length||UI.bKinds.length)?[]:maxBosses(true).filter(b=>!dup(b,mkey(b)));
+  const soon=(UI.bStars.length||UI.bKinds.length)?[]:maxBosses(true).filter(b=>!dup(b,mkey(b))&&bossQ(b));
   const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
   let body;
   if(!isMax)body=raid.length?sec('',raid,0):`<div class="empty">${GO.busy?'載入中…':(GO.raids.length?'沒有符合的 Boss':'目前沒有 Boss 資料')}</div>`;
   else body=(mx.length||soon.length)?sec('進行中',mx,0)+sec('即將登場',soon,mx.length):`<div class="empty">${GO.busy?'載入中…':((UI.bStars.length||UI.bKinds.length)?'沒有符合的 Boss':'目前沒有極巨 Boss 資料')}</div>`;
+  return `${body}<div class="syncMsg" id="goMsg">${esc(GO.msg)}</div>${isMax&&!mx.length&&!UI.bq?'<div class="syncMsg"><a href="#" data-act="goDbg">沒有極巨 Boss？點這裡看資料內容</a></div>':''}`;
+}
+function renderBoss(root,p,keep){
+  p=p||PAGES.find(x=>x.id==='boss');
+  const isMax=UI.bossMode==='max';
   const filtering=UI.bStars.length||UI.bKinds.length;
   const chips=(isMax?B_MAX:B_TEAM).map(c=>{const on=UI.bStars.includes(c[0])||UI.bKinds.includes(c[0]);return `<button class="chip bt${on?' sel':''}" style="background:${c[2]}" data-act="bChip" data-k="${c[0]}"><span>${c[1]}</span></button>`}).join('');
   root.innerHTML=`<div class="head"><h2>${esc(p.title)}</h2>${segSelect('bossSel','戰鬥類型',UI.bossMode,[['team','團體戰'],['max','極巨戰']])}</div>
     <div class="chips${filtering?' filtering':''}">${chips}</div>
-    <div class="list">${body}<div class="syncMsg" id="goMsg">${esc(GO.msg)}</div>${isMax&&!mx.length?'<div class="syncMsg"><a href="#" data-act="goDbg">沒有極巨 Boss？點這裡看資料內容</a></div>':''}</div>`;
+    <div class="sbar"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="#8d93a8" stroke-width="2.2"/><path d="M15.2 15.2L20 20" stroke="#8d93a8" stroke-width="2.2" stroke-linecap="round"/></svg><input id="bqIn" type="search" placeholder="搜尋寶可夢名字" value="${esc(UI.bq)}" autocomplete="off" autocapitalize="off" enterkeyhint="search"></div>
+    <div class="list">${bossListHtml()}</div>`;
   if(!keep){goSync(false);pkLoad().then(()=>{if(current==='boss')goRefresh()}).catch(()=>{})}
 }
 
