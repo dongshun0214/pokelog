@@ -819,12 +819,12 @@ function placeHome(){
   // 背景圖 1000x2168，cover 置中；下列座標是照使用者標記的位置換算到圖上
   const IW=1000,IH=2168,sc=Math.max(W/IW,H/IH),ox=(W-IW*sc)/2,oy=(H-IH*sc)/2;
   const X=v=>ox+v*sc,Y=v=>oy+v*sc;
-  document.body.style.setProperty('--bx',Math.round(X(782))+'px');
-  document.body.style.setProperty('--by',Math.round(Y(515))+'px');
+  document.body.style.setProperty('--bx',Math.round(X(781))+'px');
+  document.body.style.setProperty('--by',Math.round(Y(425))+'px');
   const tw=871*sc;hh.style.fontSize='100px';
   const w0=t.getBoundingClientRect().width||1;
   hh.style.fontSize=Math.min(100*tw*.9/w0,110)+'px';
-  hh.style.top=(Math.round(Y(799))-10)+'px';hh.style.transform='translateY(-50%)';
+  hh.style.top=(Math.round(Y(799))-15)+'px';hh.style.transform='translateY(-50%)';
   const cw=Math.min(635*sc,W-24);
   o.style.width=Math.round(cw)+'px';o.style.left=Math.round(X(444)-cw/2)+'px';
   o.style.top=Math.round(Y(1840))+'px';o.style.transform='translateY(-50%)';
