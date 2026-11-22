@@ -1,6 +1,6 @@
 {
  "source": "https://www.snacknap.com/max-battles",
- "updated": "2026-11-22T00:49:12+00:00",
+ "updated": "2026-11-22T15:49:21+00:00",
  "items": [
   {
    "tier": 1,
@@ -10,21 +10,15 @@
   },
   {
    "tier": 1,
-   "name": "D-Max Caterpie",
-   "cp_min": 219,
-   "cp_max": 249
-  },
-  {
-   "tier": 1,
    "name": "D-Max Gastly",
    "cp_min": 649,
    "cp_max": 702
   },
   {
    "tier": 1,
-   "name": "D-Max Growlithe",
-   "cp_min": 660,
-   "cp_max": 710
+   "name": "D-Max Pikachu",
+   "cp_min": 493,
+   "cp_max": 536
   },
   {
    "tier": 1,
@@ -52,9 +46,9 @@
   },
   {
    "tier": 1,
-   "name": "D-Max Roggenrola",
-   "cp_min": 639,
-   "cp_max": 688
+   "name": "D-Max Growlithe",
+   "cp_min": 660,
+   "cp_max": 710
   },
   {
    "tier": 1,
@@ -70,9 +64,9 @@
   },
   {
    "tier": 1,
-   "name": "D-Max Spheal",
-   "cp_min": 505,
-   "cp_max": 550
+   "name": "D-Max Roggenrola",
+   "cp_min": 639,
+   "cp_max": 688
   },
   {
    "tier": 1,
@@ -106,9 +100,21 @@
   },
   {
    "tier": 1,
-   "name": "D-Max Pikachu",
-   "cp_min": 493,
-   "cp_max": 536
+   "name": "D-Max Trubbish",
+   "cp_min": 526,
+   "cp_max": 571
+  },
+  {
+   "tier": 1,
+   "name": "D-Max Caterpie",
+   "cp_min": 219,
+   "cp_max": 249
+  },
+  {
+   "tier": 1,
+   "name": "D-Max Trapinch",
+   "cp_min": 676,
+   "cp_max": 728
   },
   {
    "tier": 1,
@@ -154,9 +160,15 @@
   },
   {
    "tier": 1,
-   "name": "D-Max Trubbish",
-   "cp_min": 526,
-   "cp_max": 571
+   "name": "D-Max Spheal",
+   "cp_min": 505,
+   "cp_max": 550
+  },
+  {
+   "tier": 1,
+   "name": "D-Max Cottonee",
+   "cp_min": 362,
+   "cp_max": 400
   },
   {
    "tier": 1,
@@ -172,12 +184,6 @@
   },
   {
    "tier": 1,
-   "name": "D-Max Cottonee",
-   "cp_min": 362,
-   "cp_max": 400
-  },
-  {
-   "tier": 1,
    "name": "D-Max Kabuto",
    "cp_min": 730,
    "cp_max": 783
@@ -190,21 +196,15 @@
   },
   {
    "tier": 1,
-   "name": "D-Max Trapinch",
-   "cp_min": 676,
-   "cp_max": 728
+   "name": "D-Max Ralts",
+   "cp_min": 275,
+   "cp_max": 308
   },
   {
    "tier": 1,
    "name": "D-Max Abra",
    "cp_min": 712,
    "cp_max": 767
-  },
-  {
-   "tier": 1,
-   "name": "D-Max Ralts",
-   "cp_min": 275,
-   "cp_max": 308
   },
   {
    "tier": 2,
@@ -217,6 +217,12 @@
    "name": "D-Max Feebas",
    "cp_min": 132,
    "cp_max": 157
+  },
+  {
+   "tier": 2,
+   "name": "D-Max Espurr",
+   "cp_min": 669,
+   "cp_max": 719
   },
   {
    "tier": 2,
@@ -256,15 +262,15 @@
   },
   {
    "tier": 3,
-   "name": "D-Max Magmar",
-   "cp_min": 1298,
-   "cp_max": 1367
+   "name": "D-Max Sableye",
+   "cp_min": 789,
+   "cp_max": 843
   },
   {
    "tier": 3,
-   "name": "D-Max Passimian",
-   "cp_min": 1654,
-   "cp_max": 1733
+   "name": "D-Max Hitmonlee",
+   "cp_min": 1399,
+   "cp_max": 1472
   },
   {
    "tier": 3,
@@ -280,9 +286,9 @@
   },
   {
    "tier": 3,
-   "name": "D-Max Sableye",
-   "cp_min": 789,
-   "cp_max": 843
+   "name": "D-Max Falinks",
+   "cp_min": 1278,
+   "cp_max": 1347
   },
   {
    "tier": 3,
@@ -292,21 +298,15 @@
   },
   {
    "tier": 3,
-   "name": "D-Max Falinks",
-   "cp_min": 1278,
-   "cp_max": 1347
-  },
-  {
-   "tier": 3,
-   "name": "D-Max Hitmonlee",
-   "cp_min": 1399,
-   "cp_max": 1472
-  },
-  {
-   "tier": 3,
    "name": "D-Max Hitmonchan",
    "cp_min": 1263,
    "cp_max": 1332
+  },
+  {
+   "tier": 3,
+   "name": "D-Max Passimian",
+   "cp_min": 1654,
+   "cp_max": 1733
   },
   {
    "tier": 3,
@@ -325,6 +325,12 @@
    "name": "D-Max Chansey",
    "cp_min": 654,
    "cp_max": 717
+  },
+  {
+   "tier": 3,
+   "name": "D-Max Magmar",
+   "cp_min": 1298,
+   "cp_max": 1367
   },
   {
    "tier": 4,
