@@ -222,13 +222,13 @@ body:not([data-page="home"]) #page{display:flex}
 .evCard.lt .goTag{background:rgba(0,0,0,.12);color:#4a4020}
 .syncMsg{font-size:12px;color:#3a3f5c;padding:6px 6px 0;text-align:center;white-space:pre-line}
 .bCard{background:var(--c);color:#fff;border-radius:14px;margin-bottom:8px;text-shadow:0 1px 2px rgba(0,0,0,.3);overflow:hidden}
-.bTop{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.bTop{display:flex;align-items:center;gap:10px;padding:10px 12px;height:84px;box-sizing:border-box}
 .bPh{width:64px;height:64px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.3);border-radius:12px}
 .bPh img{max-width:100%;max-height:100%;object-fit:contain}
 .bTx{min-width:0;flex:1}
-.bNm{font-size:16px;font-weight:800;word-break:break-word}
-.bTps{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 3px}
-.bSm{font-size:13px}
+.bNm{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bTps{display:flex;gap:4px;flex-wrap:nowrap;overflow:hidden;margin:4px 0 3px;min-height:17px}
+.bSm{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bArr{flex:none;font-size:14px;transition:transform .2s}
 .bCard.open .bArr{transform:rotate(180deg)}
 .bDet{display:none;padding:2px 12px 12px;font-size:14px}
@@ -1337,6 +1337,7 @@ function tierZh(b){
   if(/shadow/.test(t))z='暗影';
   if(/mega/.test(t))return z+'Mega 團體戰';
   if(m)return z+num[m[0]]+'星團體戰';
+  if(/raid/.test(t))return z+'團體戰';
   if(/legendary|ultra/.test(t))return z+'五星團體戰';
   return z+(b.tier||'團體戰');
 }
@@ -1390,6 +1391,7 @@ function fillMax(b){
   if(!info)return b;
   return Object.assign({},b,{types:b.types.length?b.types:info.types,image:b.image||info.photo});
 }
+function soonCmp(a,b){return a._s<b._s?-1:a._s>b._s?1:0}
 function maxBosses(soon){
   if(!PK.list)return [];
   const today=todayStr(),out=[],seen={};
@@ -1403,9 +1405,9 @@ function maxBosses(soon){
     if(!hit||seen[hit.id+kind])return;seen[hit.id+kind]=1;
     const info=MAXT[hit.id];
     if(!info&&!MAXT['p'+hit.id]){MAXT['p'+hit.id]=1;pkInfo(hit.id).then(i=>{MAXT[hit.id]=i;if(current==='boss')goRefresh()}).catch(()=>{})}
-    out.push({name:kind+' '+hit.en,tier:kind==='Dynamax'?'Dynamax Battle':'Gigantamax Battle',max:true,shiny:false,types:info?info.types:[],image:info?info.photo:'',cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[],when:soon?e.start.slice(5).replace('-','/')+(e.sTime?' '+e.sTime:''):''});
+    out.push({name:kind+' '+hit.en,tier:kind==='Dynamax'?'Dynamax Battle':'Gigantamax Battle',max:true,shiny:false,types:info?info.types:[],image:info?info.photo:'',cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[],when:soon?e.start.slice(5).replace('-','/')+(e.sTime?' '+e.sTime:''):'',_s:e.start+' '+(e.sTime||'')});
   });
-  return out;
+  return soon?out.sort(soonCmp):out;
 }
 // 即將登場的團體戰：raids.json 只有目前的 Boss，所以跟極巨戰一樣，從還沒開始的「Raid」活動標題抓寶可夢名字
 function raidSoon(){
@@ -1421,10 +1423,10 @@ function raidSoon(){
       if(seen[k])return;seen[k]=1;
       const info=MAXT[m.id];
       if(!info&&!MAXT['p'+m.id]){MAXT['p'+m.id]=1;pkInfo(m.id).then(i=>{MAXT[m.id]=i;if(current==='boss')goRefresh()}).catch(()=>{})}
-      out.push({name,tier:mega?'Mega Raid':(shadow?'Shadow '+(sm?sm[1]:'5')+'-Star Raid':(sm?sm[1]:'5')+'-Star Raid'),max:false,shiny:false,types:info?info.types:[],image:info?info.photo:'',cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[],when:e.start.slice(5).replace('-','/')+(e.sTime?' '+e.sTime:'')});
+      out.push({name,tier:mega?'Mega Raid':(shadow?'Shadow ':'')+(sm?sm[1]+'-Star ':'')+'Raid',max:false,shiny:false,types:info?info.types:[],image:info?info.photo:'',cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[],when:e.start.slice(5).replace('-','/')+(e.sTime?' '+e.sTime:''),_s:e.start+' '+(e.sTime||'')});
     });
   });
-  return out;
+  return out.sort(soonCmp);
 }
 const B_TEAM=[['1','一星','#5aa9e6'],['3','三星','#e8a33d'],['5','五星','#d9548a'],['n','一般','#6f8f6a'],['m','Mega','#c0594f'],['s','暗影','#5b4b8a']];
 const B_MAX=[['1','一星','#5aa9e6'],['2','二星','#4fb3a2'],['3','三星','#e8a33d'],['4','四星','#d9774a'],['5','五星','#c0405a'],['6','六星','#7a4fc0']];
