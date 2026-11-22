@@ -1407,6 +1407,25 @@ function maxBosses(soon){
   });
   return out;
 }
+// 即將登場的團體戰：raids.json 只有目前的 Boss，所以跟極巨戰一樣，從還沒開始的「Raid」活動標題抓寶可夢名字
+function raidSoon(){
+  if(!PK.list)return [];
+  const today=todayStr(),out=[],seen={};
+  GO.events.forEach(e=>{
+    if(e.start<=today||isExpired(e))return;
+    const t=String(e.text);
+    if(!/raid/i.test(t)||/\b(dynamax|gigantamax|max)\b/i.test(t))return;
+    const shadow=/shadow/i.test(t),sm=t.match(/\b([1-6])[- ]?star/i);
+    titleMons(e).forEach(m=>{
+      const mega=/^Mega /.test(m.name),name=(shadow&&!mega?'Shadow ':'')+m.name,k=name;
+      if(seen[k])return;seen[k]=1;
+      const info=MAXT[m.id];
+      if(!info&&!MAXT['p'+m.id]){MAXT['p'+m.id]=1;pkInfo(m.id).then(i=>{MAXT[m.id]=i;if(current==='boss')goRefresh()}).catch(()=>{})}
+      out.push({name,tier:mega?'Mega Raid':(shadow?'Shadow '+(sm?sm[1]:'5')+'-Star Raid':(sm?sm[1]:'5')+'-Star Raid'),max:false,shiny:false,types:info?info.types:[],image:info?info.photo:'',cpMin:null,cpMax:null,bMin:null,bMax:null,weather:[],when:e.start.slice(5).replace('-','/')+(e.sTime?' '+e.sTime:'')});
+    });
+  });
+  return out;
+}
 const B_TEAM=[['1','一星','#5aa9e6'],['3','三星','#e8a33d'],['5','五星','#d9548a'],['n','一般','#6f8f6a'],['m','Mega','#c0594f'],['s','暗影','#5b4b8a']];
 const B_MAX=[['1','一星','#5aa9e6'],['2','二星','#4fb3a2'],['3','三星','#e8a33d'],['4','四星','#d9774a'],['5','五星','#c0405a'],['6','六星','#7a4fc0']];
 function raidStar(b){const m=String(b.tier).match(/[1-6]/);return m?m[0]:(isMega(b)?'5':'')}
@@ -1443,7 +1462,8 @@ function bossListHtml(){
   const soon=(UI.bStars.length||UI.bKinds.length)?[]:maxBosses(true).filter(b=>!dup(b,mkey(b))&&bossQ(b));
   const sec=(t,a,off)=>a.length?`<div class="bHd">${t}</div>`+a.map((b,i)=>bossCard(b,off+i)).join(''):'';
   let body;
-  if(!isMax)body=raid.length?sec('',raid,0):`<div class="empty">${GO.busy?'載入中…':(GO.raids.length?'沒有符合的 Boss':'目前沒有 Boss 資料')}</div>`;
+  const rsoon=(UI.bStars.length||UI.bKinds.length)?[]:raidSoon().filter(bossQ);
+  if(!isMax)body=(raid.length||rsoon.length)?sec('進行中',raid,0)+sec('即將登場',rsoon,raid.length):`<div class="empty">${GO.busy?'載入中…':(GO.raids.length?'沒有符合的 Boss':'目前沒有 Boss 資料')}</div>`;
   else body=(mx.length||soon.length)?sec('進行中',mx,0)+sec('即將登場',soon,mx.length):`<div class="empty">${GO.busy?'載入中…':((UI.bStars.length||UI.bKinds.length)?'沒有符合的 Boss':'目前沒有極巨 Boss 資料')}</div>`;
   return `${body}<div class="syncMsg" id="goMsg">${esc(GO.msg)}</div>${isMax&&!mx.length&&!UI.bq?'<div class="syncMsg"><a href="#" data-act="goDbg">沒有極巨 Boss？點這裡看資料內容</a></div>':''}`;
 }
